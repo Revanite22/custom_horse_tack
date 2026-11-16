@@ -1,16 +1,19 @@
 package com.outrightwings.truly_custom_horse_tack.client.renderer;
 
 import com.outrightwings.truly_custom_horse_tack.Main;
+import com.outrightwings.truly_custom_horse_tack.block.entity.SaddleRackWallBlockEntity;
 import com.outrightwings.truly_custom_horse_tack.client.renderer.model.RackWallModel;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import java.util.function.Function;
 
 @OnlyIn(Dist.CLIENT)
-public class SaddleRackWallBlockEntityRenderer extends DisplayModelEntityRenderer{
-    public SaddleRackWallBlockEntityRenderer(BlockEntityRendererProvider.Context context){
-        this.displayModel = new RackWallModel(RackWallModel.createBodyLayer().bakeRoot());
-        this.standTexture = new ResourceLocation(Main.MODID,"textures/entity/rack.png");
+public class SaddleRackWallBlockEntityRenderer extends DisplayModelEntityRenderer<SaddleRackWallBlockEntity> {
+    public SaddleRackWallBlockEntityRenderer(BlockEntityRendererProvider.Context context, Function<ItemStack, Identifier> tackTextures) {
+        super(new RackWallModel(RackWallModel.createBodyLayer().bakeRoot()),
+                Identifier.fromNamespaceAndPath(Main.MODID, "textures/entity/rack.png"), DisplayRenderState.Kind.RACK_WALL, tackTextures);
     }
 }

@@ -1,4 +1,4 @@
-# Isolated item, crafting, persistence, block and menu regression checks
+# Isolated migration regression checks
 
 Run from the tack checkout with Java 25:
 
@@ -14,10 +14,19 @@ fixture items use the real registry identities; pattern items and mixed dye use
 their actual production implementations. A fixture display exercises the shared
 production block entity. Two clearly marked fixture substitutes provide the main
 mod ID and item register. The production Saddler menu has replaced Task 6's menu
-substitute. The fixture mod is not included in the tack artifact and does not
-load RHG or establish in-game equipment compatibility.
+substitute. The fixture mod is not included in the tack artifact or a substitute
+for in-game equipment testing. Task 8 also compiles the
+actual standalone display renderers, registration helper, baked models and tint
+source. Display texture resolution is injected, so tests need no RHG texture
+class or GPU upload for the standalone display checks.
 
-The suite currently has 36 tests (zero failures/errors/skips in Task 7):
+Task 9 adds checks against the exact RHG Build #2 JAR. The fixture reuses the root
+`gradle/rhg-dependency.gradle` mechanism and reads its version/hash pins from the
+root properties. Supply `-PrhgJar=...` or the stable HTTPS artifact URL described
+in BUILDING.md; substitute releases are rejected. Artifact copies stay in the
+ignored fixture build directory. Earlier checks retain their fixture registries.
+
+The suite currently has 55 tests (zero failures/errors/skips in Task 9):
 
 - Original item-data checks: pattern order, dye IDs/RGB, unknown fields and
   patterns, copies, washing, codec round trips and vanilla item conversion from
@@ -51,6 +60,23 @@ The suite currently has 36 tests (zero failures/errors/skips in Task 7):
 - Invalid buttons/inputs/malformed data, all input/output shift-click routes,
   full-inventory rejection, workstation-distance validation and returning only
   the inputs on close, with no crafted output duplication.
+- All four renderer registrations and real provider construction; extraction
+  for every display orientation, immutable ordered color/pattern snapshots,
+  malformed/empty/saddle state handling and reuse without stale rendering data.
+- Original ground/center transform across sixteen headings, decorative display
+  restrictions and poses, folded wings, ribbon counter-rotation and untinted
+  overlays. Draw submissions preserve material order, light, breaking overlay,
+  packed colors and the caller's pose stack.
+- Legacy and modern item RGB tinting, actual tint-source registration, and full
+  target-codec decoding of both new item definitions with original model IDs
+  and the untinted mixed-dye tin layer.
+- Exact texture catalog/RHG layer-group order, base/overlay colors, dye IDs and
+  RGB channels, immutable snapshots and unknown customization retention.
+- RHG state-modifier registration and BODY snapshots for actual horse/donkey/mule
+  classes (mock entities), ordinary-equipment fallback and pooled-state cleanup.
+- Head/ribbon/bell/wing poses and reset behavior, decorative textures and colors,
+  banner mask order, and equipment/body/pattern queue ordering. The actual RHG
+  armor model accepts its GeneticHorseRenderState.
 
 Unit tests do not run a server data-pack reload. Resource-codec checks supply
 named holders for five tags verified in vanilla/NeoForge resources; they do not
@@ -67,7 +93,17 @@ preview visuals or network packet transport. Menu tests use real inventories
 and the production block's provider; only inventory-return packet sending is
 disabled in their fixture inventory. Server levels/players are mocks. Live GUI,
 preview sizing and multiplayer synchronization require a working client/server
-after the remaining rendering/mixin migration.
+after the remaining rendering/mixin migration. Rendering tests use a mock draw
+collector and a probe registration event. They compile and exercise the real
+render paths without issuing GPU commands. They do not test texture composition
+upload/reload, client event-bus discovery, actual resource-pack baking or visual
+appearance. The RHG-backed TextureCache is checked by full-source compilation
+and direct inspection of the pinned RHG JAR API. Texture composition descriptions
+are also tested against actual RHG TextureLayerGroup/Color classes. Integration
+tests use real RHG class definitions and production tack code, mock entities,
+a fake texture identifier and mock collectors. They do not start a complete RHG
+world/client, upload textures or load the legacy mixins. No RHG model/state copy
+or simplified substitute is used.
 
 Reports: `tests/item-data/build/test-results/test/` and
 `tests/item-data/build/reports/tests/test/`.

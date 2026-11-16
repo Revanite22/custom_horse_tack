@@ -1,0 +1,11 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "truly_custom_horse_tack:item/ribbon",
+    "tints": [
+      {
+        "type": "truly_custom_horse_tack:tack_dye"
+      }
+    ]
+  }
+}

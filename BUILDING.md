@@ -308,6 +308,152 @@ handling remain deferred until the complete mod can compile and load. RHG,
 resource assets and registry identifiers are unchanged; no decisions are needed
 to complete this stage.
 
+## Task 8: standalone display rendering and tints
+
+All four display renderers now implement the target's typed
+`BlockEntityRenderer<T, DisplayRenderState>` contract. This changes standalone
+rendering only; horse model mixins, horse equipment rendering, accessory storage
+and flight remain untouched.
+
+- `extractRenderState` uses the vanilla base extractor for position/light and
+  breaking progress, then snapshots rotation, the composed tack/saddle texture
+  identifier and immutable ordered pattern/color records. It copies the stack
+  and reads `CUSTOM_DATA` through `TackItemData`; submission retains no inventory,
+  mutable NBT or live block entity. Empty/reused states are fully overwritten.
+- `submit` uses `SubmitNodeCollector.submitModelPart`, modern RenderTypes and
+  packed ARGB colors. The original quaternion/translation order is unchanged.
+  The stand pass stays cutout without culling; tack stays translucent without
+  culling. Direct target RenderPipelines source confirms those culling settings.
+  Light, untinted overlays and breaking progress are passed to every surface.
+- Four display model classes retain byte-identical geometry factories, UVs and
+  part selection. The common display model adapts to `Model<Unit>`'s root-aware
+  constructor and final render methods; direct model-part submission preserves
+  the original separate stand/body passes, including the head stand's shared
+  stand/body part selection.
+- The original SpecialTack model classes combine display drawing with legacy
+  horse animation. They cannot compile independently under the new Model and
+  render-state APIs. To respect this stage's boundary without dropping visual
+  parts, `DisplayTackGeometry` contains exact copies of their six geometry
+  factories, and `DisplayTackParts` retains only their original static display
+  poses/textures. Horns and ear ribbons draw on head stands; bells and folded
+  wings draw on racks, with the same wall/floor offsets, color choices and white
+  overlays. The horse-side classes and methods are unchanged. Consolidating
+  these temporary geometry copies can be considered during the later authorized
+  horse-rendering stage. This adds no accessory inventory or flight behavior.
+- Display decorative parts are posed once per renderer and never mutated during
+  submission. This matters because the target draw collector retains ModelPart
+  references until later execution. It prevents another display/horse render
+  from changing already queued geometry.
+- `DisplayRenderers.register` preserves the four original block-entity bindings
+  with fully typed providers. ClientEvents retains its client-only subscriber
+  and menu-screen registration, delegates display registration, and registers
+  the modern item tint codec. No block tint handlers existed; colored jumps
+  continue to use their existing separate textures.
+- Item tinting uses `TackItemTint` (`truly_custom_horse_tack:tack_dye`) with both
+  component and legacy display.color fallback through `TackItemData`. The two
+  required modern `assets/.../items/{mixable_dye,ribbon}.json` definitions point
+  to the original item model IDs. Mixed dye's first layer is tinted and its tin
+  layer explicitly stays white; ribbon is tinted. Existing model JSON and all
+  textures remain unchanged. This does not convert unrelated item definitions.
+- TextureCache now uses Identifier and an immutable copied CUSTOM_DATA key.
+  The exact RHG dev.2 JAR declares `CustomLayeredTexture(Identifier,
+  TextureLayerGroup)` and extends ReloadableTexture. The cache keeps the original
+  layered composition/unique-name scheme and calls TextureManager.registerAndLoad
+  so a texture is uploaded before use and remains eligible for resource reload.
+  This is use of the existing texture utility, not migration of RHG's renderer;
+  RHG itself is unchanged.
+
+API references inspected directly from the cached target sources:
+`BlockEntityRenderer`, `BlockEntityRenderState`, `OrderedSubmitNodeCollector`,
+`SubmitNodeStorage.ModelPartSubmit`, `Model`, `RenderTypes`, `RenderPipelines`,
+`TextureManager`, `RegisterColorHandlersEvent.ItemTintSources`, ItemTintSource
+and ClientItem. No replacement signatures were inferred from version names.
+
+Validation: all 44 focused tests pass (36 previous plus eight rendering checks),
+with zero failures/errors/skips. The new fixture compiles production display
+renderers/models and exercises registration factories, extraction, fixed poses,
+submission parameters and item-definition codecs. It uses no GPU or RHG runtime;
+see its README for limits. Geometry audits compare all four display factories
+and six copied decorative factories with their original bodies exactly.
+Resource processing passes, including the two item definitions. Full Java
+compilation reports 135 errors, down from 228: legacy horse-side models/catalog/
+rotation utility (95) and horse/saddle/living-entity mixins (40). No diagnostics
+originate in this stage's migrated classes. Logs remain local in
+`.gradle/task8-tests.log` and `.gradle/task8-compile.log`. Actual GPU texture
+upload/reload, visual appearance and event-bus startup require a runnable client
+after the remaining migration. No RHG modification or user decision is required
+for this stage.
+
+## Task 9: horse-side rendering
+
+The horse-side models, catalog and animation utilities now use the target Model,
+render-state and queued submission APIs. RHG Build #2 was inspected directly via
+`javap -p -c -s`; no RHG source or artifact was modified. Its ClientRegistration
+uses HorseGeneticRenderer for horses, donkeys and mules. Its getArmor() returns
+BODY equipment, and its extractor copies that stack into bodyArmorItem and
+populates GeneticHorseRenderState before NeoForge runs state modifiers.
+
+`HorseTackIntegration` registers a public NeoForge render-state modifier and an
+AddLayers handler. It attaches immutable HorseTackRenderData, using RHG's captured
+head/pitch/gait/eating/rearing fields plus read-only flight-animation timing and
+equipped visual items. It does not write equipment, flight state or accessory
+inventory. Only custom BODY tack suppresses RHG's armorTexture/saddleTexture;
+ordinary equipment retains RHG's own texture/tint/foil paths. State extraction
+replaces the attachment every time, including empty/ordinary equipment frames.
+
+`HorseTackLayer` is added to existing RHG renderer instances, rather than replacing
+them. It uses RHG's HorseGeneticModel baked from HORSE_ARMOR_LAYER so genetic
+ears/mane/tail, armor UVs, animation and parent-renderer scale remain under RHG's
+control. Equipped decorative visuals queue before the translucent custom tack
+surface, followed by tack pattern models in their original order. Existing
+equipment/banner drawing is read-only; its storage mechanics remain deferred.
+
+The seven original decorative geometry factories (including two ribbons and the
+banner) are byte-identical. Models now reset/apply captured Motion in setupAnim
+when the queued draw executes. This retains head clamps/eating/rearing/gait,
+ribbon counter-rotation, bell side rotations, folded/open wings and the original
+flap/flag wave equations without reading live entities or the clock during a
+later draw. Materials retain their colors, untinted overlays and outline/light.
+Banner rendering uses modern sprite/component APIs with the original geometry,
+pole/bar/fabric transforms and ordered base/masks. The original last-banner
+selection behavior for multiple equipped banners is retained.
+
+`TackTextureCatalog` exposes the original ordered composition as immutable
+texture/color entries. CustomTackItem's getTextureLayers delegates only its
+texture-description construction to that catalog and converts entries to the
+same RHG TextureLayerGroup/Color representation. Empty base, all 98 pattern IDs,
+white overlays, dye-ID colors, RGB channels, unknown-data retention and uncapped
+order remain unchanged. No item/equipment gameplay or serialization is changed.
+TackModels retains its nine decorative definitions. Task 8's independent display
+geometry copies remain in place; consolidating them is unnecessary for this task.
+
+No new rendering mixin is required: NeoForge's post-extraction state modifier and
+public AddLayers hook cover this integration. Existing HorseArmorRendererMixin
+and SaddleMixin are intentionally unchanged and obsolete. Task 10 must retire
+or otherwise resolve their old methods/config entries; new injections alongside
+the event layer would double-render. Exact verified descriptors and the migration
+boundary are recorded in [docs/TASK10_RENDERING_HOOKS.md](docs/TASK10_RENDERING_HOOKS.md).
+No architectural blocker requiring RHG changes was found.
+
+The fixture now uses the exact pinned RHG artifact through the existing verified
+dependency mechanism. A small property lookup change in rhg-dependency.gradle
+allows the fixture to inherit root version/hash pins without duplicating them;
+the checksum, artifact identity and acquisition behavior are unchanged. Neither
+the JAR nor generated fixture outputs enter Git.
+
+Validation: all 55 focused tests pass (44 previous plus 11 horse-rendering checks),
+including actual RHG classes for all three genetic entity types, RHG armor-model
+setup/submission, registration signatures, texture group/color conversion, model
+poses, banner mask order and equipment/body/pattern queue order. Entity instances
+and collectors are mocks; GPU upload and full event-bus/client startup are not
+tested. Full Java compilation reports 46 errors, down from 135; every diagnostic
+is in unchanged legacy mixins, with none in migrated models/layers/catalog/client
+registration. Resource processing passes. Logs remain local in
+`.gradle/task9-tests.log` and `.gradle/task9-compile.log`. Live horse/donkey/mule,
+foal and Saddler preview visuals await a runnable client after remaining mixin
+work. All Task 8 edits remain pending alongside this task; no commit or push is
+performed.
+
 ## Legacy configuration decisions
 
 - Remove NeoGradle's `minecraft` block, `fg.deobf`, `reobfJar`, MixinGradle and

@@ -2,6 +2,7 @@ package com.outrightwings.truly_custom_horse_tack.item;
 
 import com.outrightwings.truly_custom_horse_tack.Main;
 import com.outrightwings.truly_custom_horse_tack.item.tack.TackPattern;
+import com.outrightwings.truly_custom_horse_tack.item.tack.TackTextureCatalog;
 import com.outrightwings.truly_custom_horse_tack.item.tack.TackTagUtility;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
@@ -94,24 +95,10 @@ public class CustomTackItem extends Item implements TackItemData.TackItem {
     public TextureLayerGroup getTextureLayers(ItemStack stack){
         TextureLayerGroup layerGroup = new TextureLayerGroup();
 
-        CompoundTag tagData = TackItemData.read(stack);
-        //This is to prevent crashing by  always having a blank base layer
-        layerGroup.add(buildLayer(EMPTY_LAYER.toString(), Color.WHITE));
-        for(int i = 0; i < TackTagUtility.getPatternListSize(tagData);i++) {
-            Tuple<Integer, String> colorPattern = TackTagUtility.getColorAndPatternByIndex(tagData, i);
-
-            if (colorPattern == null) continue;
-            float[] rawColor = TackTagUtility.getColorFromColorTag(colorPattern.getA());
-            Color color = new Color(rawColor[0],rawColor[1],rawColor[2]);
-
-            TackPattern tackPattern = TackPattern.getTackPattern(colorPattern.getB());
-            if (tackPattern != null) {
-                layerGroup.add(buildLayer(tackPattern.getArmorTextureLocation().toString(),color));
-                Identifier overlayLocation = tackPattern.getOverlayTextureLocation();
-                if (overlayLocation != null) {
-                    layerGroup.add(buildLayer(overlayLocation.toString(),Color.WHITE));
-                }
-            }
+        for (var layer : TackTextureCatalog.layers(stack)) {
+            int rgb = layer.color();
+            layerGroup.add(buildLayer(layer.texture().toString(), new Color(
+                    (rgb >> 16 & 255) / 255.0f, (rgb >> 8 & 255) / 255.0f, (rgb & 255) / 255.0f)));
         }
         return layerGroup;
     }

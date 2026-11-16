@@ -1,43 +1,46 @@
 package com.outrightwings.truly_custom_horse_tack.client.renderer.model.SpecialTack;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.Minecraft;
+import com.outrightwings.truly_custom_horse_tack.client.renderer.HorseTackRenderData;
+import com.outrightwings.truly_custom_horse_tack.client.renderer.HorseTackRenderData.Motion;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.blockentity.BannerRenderer;
+import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
+import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.BannerItem;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.entity.BannerBlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import org.apache.commons.lang3.ObjectUtils;
+import net.minecraft.util.Unit;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import org.joml.Quaternionf;
-import sekelsta.horse_colors.entity.AbstractHorseGenetic;
-
-import java.util.concurrent.atomic.AtomicReference;
 
 @OnlyIn(Dist.CLIENT)
 public class FlagModel extends SpecialTackModel {
-    final ModelPart flag;
-    final ModelPart pole;
-    final ModelPart bar;
-    public FlagModel(ModelPart root) {
-        super(RenderType::entityCutoutNoCull);
-        this.flag = root.getChild("flag");
-        this.pole = root.getChild("pole");
-        this.bar = root.getChild("bar");
+    private final Model.Simple pole, bar;
+    private final Model<Motion> fabric;
+    private final SpriteGetter sprites;
+
+    public FlagModel(ModelPart root, SpriteGetter sprites) {
+        super(root); this.sprites = sprites;
+        pole = new Model.Simple(root.getChild("pole"), RenderTypes::entitySolid);
+        bar = new Model.Simple(root.getChild("bar"), RenderTypes::entitySolid);
+        fabric = new Model<Motion>(root.getChild("flag"), RenderTypes::entitySolid) {
+            @Override public void setupAnim(Motion state) {
+                super.setupAnim(state);
+                root().xRot = (-0.0125F + 0.01F * Mth.cos(((float)Math.PI * 2F) * state.phase())) * (float)Math.PI;
+                root().x = 0; root().y = -42;
+            }
+        };
     }
+
     public static LayerDefinition createBodyLayer() {
         MeshDefinition meshdefinition = new MeshDefinition();
         PartDefinition partdefinition = meshdefinition.getRoot();
@@ -46,49 +49,30 @@ public class FlagModel extends SpecialTackModel {
         partdefinition.addOrReplaceChild("bar", CubeListBuilder.create().texOffs(0, 42).addBox(-19.0F, -32.0F, 7.0F, 20.0F, 2.0F, 2.0F, new CubeDeformation(0.0F)), PartPose.offsetAndRotation(-32.0F, -23.0F, -8.0F, 0.0F, 0.0F, 1.5708F));
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
-    public void renderOnHorse(AbstractHorseGenetic entityIn, PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay,float ticks,float limbSwing,float limbSwingAmount,float[] color) {
-        ItemStack bannerItem = null;
-        var slots = EquipmentSlot.values();
-        for (var slot : slots) {
-            if (slot == EquipmentSlot.CHEST) continue;
-            ItemStack item = entityIn.getItemBySlot(slot);
-            if(item.getItem()  instanceof BannerItem){
-                bannerItem = item;
-            }
+
+    @Override public void submit(Motion state, PoseStack pose, OrderedSubmitNodeCollector collector, int light, int outline, int color) {
+        submitBanner(state, pose, collector, light, outline, new HorseTackRenderData.Banner(DyeColor.WHITE, BannerPatternLayers.EMPTY));
+    }
+
+    public void submitBanner(Motion state, PoseStack pose, OrderedSubmitNodeCollector collector, int light, int outline, HorseTackRenderData.Banner banner) {
+        pose.pushPose();
+        pose.mulPose(new Quaternionf(-0.03f, 0.70f, -0.03, 0.70f));
+        pose.translate(Mth.lerp(state.rearing(), 0.3f, 0.3f-0.43f), Mth.lerp(state.rearing(), -0.2f, -0.2f-0.56f), -0.35f);
+        pose.scale(0.6666667F, 0.6666667F, 0.6666667F);
+        collector.submitModel(pole, Unit.INSTANCE, pose, light, OverlayTexture.NO_OVERLAY, -1, Sheets.BANNER_BASE, sprites, outline, null);
+        collector.submitModel(bar, Unit.INSTANCE, pose, light, OverlayTexture.NO_OVERLAY, -1, Sheets.BANNER_BASE, sprites, outline, null);
+        collector.submitModel(fabric, state, pose, light, OverlayTexture.NO_OVERLAY, -1, Sheets.BANNER_BASE, sprites, outline, null);
+        pattern(state, pose, collector, light, outline, Sheets.BANNER_PATTERN_BASE, banner.base());
+        // The original banner renderer rendered at most 16 pattern masks.
+        for (int i = 0; i < Math.min(16, banner.patterns().layers().size()); i++) {
+            var layer = banner.patterns().layers().get(i);
+            pattern(state, pose, collector, light, outline, Sheets.getBannerSprite(layer.pattern()), layer.color());
         }
-
-        if(bannerItem == null) return;
-
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf(-0.03f,0.70f,-0.03,0.70f));
-
-        float between = entityIn.getStandAnim(ticks);
-        poseStack.translate(Mth.lerp(between,0.3f,0.3f-0.43f),Mth.lerp(between,-0.2f,-0.2f-0.56f),-0.35f);
-
-        poseStack.pushPose();
-        poseStack.scale(0.6666667F, 0.6666667F, 0.6666667F);
-        VertexConsumer vertexConsumer = ModelBakery.BANNER_BASE.buffer(bufferSource, RenderType::entitySolid);
-        this.pole.render(poseStack,vertexConsumer,light,overlay,1,1,1,1);
-        this.bar.render(poseStack,vertexConsumer,light,overlay,1,1,1,1);
-
-        long time = Minecraft.getInstance().level.getGameTime();
-        float f2 = ((float)Math.floorMod(time, 100L) + ticks) / 100.0F;
-        this.flag.xRot = (-0.0125F + 0.01F * Mth.cos(((float)Math.PI * 2F) * f2)) * (float)Math.PI;
-        this.flag.x = 0;
-        this.flag.y = -42.0F;
-        var patterns = BannerBlockEntity.createPatterns(((BannerItem) bannerItem.getItem()).getColor() ,BannerBlockEntity.getItemPatterns(bannerItem));
-        BannerRenderer.renderPatterns(poseStack, bufferSource, light, overlay, this.flag, ModelBakery.BANNER_BASE, true,patterns);
-        poseStack.popPose();
-        poseStack.popPose();
+        pose.popPose();
     }
 
-    @Override
-    public void renderOnRack(BlockEntity blockEntity, PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, boolean wall,float[] color) {
-
-    }
-
-    @Override
-    public void renderOnStand(BlockEntity blockEntity, PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, boolean wall,float[] color) {
-
+    private void pattern(Motion state, PoseStack pose, OrderedSubmitNodeCollector collector, int light, int outline, SpriteId sprite, DyeColor color) {
+        collector.submitModel(fabric, state, pose, sprite.renderType(RenderTypes::bannerPattern), light, OverlayTexture.NO_OVERLAY,
+                0xFF000000 | color.getTextureDiffuseColor(), sprites.get(sprite), outline, null);
     }
 }

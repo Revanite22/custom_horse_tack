@@ -2,8 +2,8 @@ package com.outrightwings.truly_custom_horse_tack.client.item.tack;
 
 import com.outrightwings.truly_custom_horse_tack.client.renderer.model.SpecialTack.*;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public enum TackModels implements StringRepresentable {

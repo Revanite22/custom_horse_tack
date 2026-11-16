@@ -1,31 +1,30 @@
 package com.outrightwings.truly_custom_horse_tack.client.renderer.model.SpecialTack;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.outrightwings.truly_custom_horse_tack.Main;
+import com.outrightwings.truly_custom_horse_tack.client.renderer.HorseTackRenderData.Motion;
 import com.outrightwings.truly_custom_horse_tack.client.util.HorseModelRotations;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import sekelsta.horse_colors.entity.AbstractHorseGenetic;
+import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+
 @OnlyIn(Dist.CLIENT)
-public class RibbonModel extends SpecialTackModel{
-    private final ModelPart ribbon;
-    private final ModelPart longs;
-    private final ModelPart flower;
-    private static final ResourceLocation texture = new ResourceLocation(Main.MODID,"textures/entity/horse/special_tack/ribbon.png");
+public class RibbonModel extends SpecialTackModel {
+    private final ModelPart ribbon, longs, flower;
+    private final Identifier texture = id("ribbon"), overlay = null;
     public RibbonModel(ModelPart root) {
-        super(RenderType::entityCutoutNoCull);
-        this.ribbon = root.getChild("ribbon");
-        this.longs = ribbon.getChild("longs");
-        this.flower = ribbon.getChild("flower");
+        super(root); ribbon = root.getChild("ribbon"); longs = ribbon.getChild("longs"); flower = ribbon.getChild("flower");
     }
+    @Override public void setupAnim(Motion state) {
+        super.setupAnim(state); HorseModelRotations.rotateModelWithHead(ribbon, state);
+        longs.xRot = -ribbon.xRot; flower.xRot = longs.xRot;
+    }
+
     public static LayerDefinition createBodyLayerRight() {
         MeshDefinition meshdefinition = new MeshDefinition();
         PartDefinition partdefinition = meshdefinition.getRoot();
@@ -49,6 +48,7 @@ public class RibbonModel extends SpecialTackModel{
 
         return LayerDefinition.create(meshdefinition, 16, 16);
     }
+
     public static LayerDefinition createBodyLayerLeft() {
         MeshDefinition meshdefinition = new MeshDefinition();
         PartDefinition partdefinition = meshdefinition.getRoot();
@@ -73,29 +73,10 @@ public class RibbonModel extends SpecialTackModel{
 
         return LayerDefinition.create(meshdefinition, 16, 16);
     }
-    @Override
-    public void renderOnHorse(AbstractHorseGenetic entityIn, PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, float ticks, float limbSwing, float limbSwingAmount, float[] color) {
-        HorseModelRotations.rotateModelWithHead(this.ribbon,entityIn,ticks,limbSwing,limbSwingAmount);
-        longs.xRot = -ribbon.xRot;
-        //this.longs.xRot = Mth.DEG_TO_RAD*-30;
-        this.flower.xRot= longs.xRot;
-        VertexConsumer vertexConsumer;
-        vertexConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(texture));
-        this.ribbon.render(poseStack,vertexConsumer,light,overlay,color[0],color[1],color[2],1f);
-    }
 
-    @Override
-    public void renderOnRack(BlockEntity blockEntity, PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, boolean wall, float[] color) {
-
+    @Override public void submit(Motion state, PoseStack pose, OrderedSubmitNodeCollector collector, int light, int outline, int color) {
+        surface(collector, state, pose, light, outline, texture, color);
+        surface(collector, state, pose, light, outline, overlay, -1);
     }
-
-    @Override
-    public void renderOnStand(BlockEntity blockEntity, PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, boolean wall, float[] color) {
-        HorseModelRotations.rotateModelToHeadStand(this.ribbon);
-        this.flower.xRot = -this.ribbon.xRot;
-        this.longs.xRot= this.flower.xRot;
-        VertexConsumer vertexConsumer;
-        vertexConsumer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(texture));
-        this.ribbon.render(poseStack,vertexConsumer,light,overlay,color[0],color[1],color[2],1f);
-    }
+    private static Identifier id(String path) { return Identifier.fromNamespaceAndPath(Main.MODID, "textures/entity/horse/special_tack/"+path+".png"); }
 }

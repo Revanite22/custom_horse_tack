@@ -2,9 +2,9 @@ package com.outrightwings.truly_custom_horse_tack.client.util;
 
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import sekelsta.horse_colors.entity.AbstractHorseGenetic;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import com.outrightwings.truly_custom_horse_tack.client.renderer.HorseTackRenderData.Motion;
 @OnlyIn(Dist.CLIENT)
 public class HorseModelRotations {
     public static float updateHorseRotation(float prevRotation, float currentRotation, float partialTickTime) {
@@ -19,22 +19,20 @@ public class HorseModelRotations {
 
         return prevRotation + partialTickTime * bodyRotation;
     }
-    public static void rotateModelWithHead(ModelPart part, AbstractHorseGenetic entityIn,float ticks,float limbSwing,float limbSwingAmount){
-        float bodyRotation = updateHorseRotation(entityIn.yBodyRotO, entityIn.yBodyRot, ticks);
-        float headRotation = updateHorseRotation(entityIn.yHeadRotO, entityIn.yHeadRot, ticks);
-        float interpolatedPitch = entityIn.xRotO + (entityIn.getXRot() - entityIn.xRotO) * ticks;
+    public static void rotateModelWithHead(ModelPart part, Motion state) {
+        float interpolatedPitch = state.pitch();
         float f4 = interpolatedPitch * 0.017453292F;
-        if (limbSwingAmount > 0.2F)
+        if (state.limbSpeed() > 0.2F)
         {
-            f4 += Mth.cos(limbSwing * 0.4F) * 0.15F * limbSwingAmount;
+            f4 += Mth.cos(state.limbSwing() * 0.4F) * 0.15F * state.limbSpeed();
         }
 
-        float headRelativeRotation = headRotation - bodyRotation;
+        float headRelativeRotation = state.headRotation();
         headRelativeRotation = headRelativeRotation > 20.0F ? 20 : headRelativeRotation;
         headRelativeRotation = headRelativeRotation < -20.0F ? -20 : headRelativeRotation;
 
-        float grassEatingAmount = entityIn.getEatAnim(ticks);
-        float rearingAmount = entityIn.getStandAnim(ticks);
+        float grassEatingAmount = state.eating();
+        float rearingAmount = state.rearing();
         float neckBend = rearingAmount + 1.0F - Math.max(rearingAmount, grassEatingAmount);
 
         part.setPos(0.0F, 4.0F, -10.0F);
@@ -43,9 +41,9 @@ public class HorseModelRotations {
         part.y = rearingAmount * -6.0F + grassEatingAmount * 11.0F + (1.0F - Math.max(rearingAmount, grassEatingAmount)) * 4.0F;
         part.z = rearingAmount * -1.0F + grassEatingAmount * -10.0F + (1.0F - Math.max(rearingAmount, grassEatingAmount)) * -10.0F;
     }
-    public static void rotateModelWithBody(ModelPart part, AbstractHorseGenetic entityIn,float ticks,float limbSwing,float limbSwingAmount){
+    public static void rotateModelWithBody(ModelPart part, Motion state){
        part.setPos(-1,11,9);
-       part.xRot = entityIn.getStandAnim(ticks) * -0.7853982F;
+       part.xRot = state.rearing() * -0.7853982F;
     }
     public static void rotateModelToHeadStand(ModelPart part){
         part.setPos(0.0F, 18.0F, -5.0F);

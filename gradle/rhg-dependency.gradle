@@ -5,7 +5,8 @@ import java.security.MessageDigest
 // Never build RHG, substitute a public release, or bundle it in the tack JAR.
 def rhgJar = providers.gradleProperty('rhgJar')
 def rhgUrl = providers.gradleProperty('rhgArtifactUrl')
-def expectedHash = providers.gradleProperty('rhg_sha256').get()
+// Also allows the isolated integration fixture to inherit the root project's pins.
+def expectedHash = project.property('rhg_sha256').toString()
 def sourceFile = rhgJar.isPresent() ? file(rhgJar.get()) : null
 def dependencyFile = layout.buildDirectory.file("dependencies/realistic_horse_genetics-${rhg_version}.jar")
 def sha256 = { File file ->

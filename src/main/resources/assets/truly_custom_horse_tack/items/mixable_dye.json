@@ -1,0 +1,15 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "truly_custom_horse_tack:item/mixable_dye",
+    "tints": [
+      {
+        "type": "truly_custom_horse_tack:tack_dye"
+      },
+      {
+        "type": "minecraft:constant",
+        "value": 16777215
+      }
+    ]
+  }
+}
