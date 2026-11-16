@@ -1,0 +1,9 @@
+{
+  "type": "truly_custom_horse_tack:dye_item",
+  "category": "misc",
+  "dye": "#c:dyes",
+  "target": "truly_custom_horse_tack:mixable_dye",
+  "result": {
+    "id": "truly_custom_horse_tack:mixable_dye"
+  }
+}

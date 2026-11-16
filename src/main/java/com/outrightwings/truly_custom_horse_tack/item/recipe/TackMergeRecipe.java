@@ -1,37 +1,33 @@
 package com.outrightwings.truly_custom_horse_tack.item.recipe;
 
-import com.outrightwings.truly_custom_horse_tack.item.CustomTackItem;
-import com.outrightwings.truly_custom_horse_tack.item.ModItems;
-import com.outrightwings.truly_custom_horse_tack.item.tack.TackPattern;
-import com.outrightwings.truly_custom_horse_tack.item.tack.TackTagUtility;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Tuple;
-import net.minecraft.world.Container;
-import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.CraftingInput;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.codec.StreamCodec;
+import com.outrightwings.truly_custom_horse_tack.item.tack.TackItemData;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
 import net.minecraft.world.level.Level;
 
 public class TackMergeRecipe extends CustomRecipe {
-    public TackMergeRecipe(ResourceLocation resourceLocation, CraftingBookCategory bookCategory) {
-        super(resourceLocation,bookCategory);
-    }
+    public static final TackMergeRecipe INSTANCE = new TackMergeRecipe();
+    public static final RecipeSerializer<TackMergeRecipe> SERIALIZER = new RecipeSerializer<>(
+            MapCodec.unit(INSTANCE), StreamCodec.unit(INSTANCE));
 
-    Tuple<ItemStack,Integer> findDecorated(CraftingContainer container, int prev, boolean decorated){
+    public TackMergeRecipe() {}
+
+    Tuple<ItemStack,Integer> findDecorated(CraftingInput container, int prev, boolean decorated){
         ItemStack found = null;
         int index = -1;
-        for(int i = 0; i < container.getContainerSize(); i++){
+        for(int i = 0; i < container.size(); i++){
             ItemStack stack = container.getItem(i);
-            if(stack.getItem() instanceof CustomTackItem){
-                int listSize = TackTagUtility.getPatternListSize(stack.getTag());
+            if(TackItemData.isTack(stack)){
+                var data = TackItemData.read(stack);
+                // A malformed Patterns field is not blank tack and must not be consumed.
+                if (data.contains("Patterns") && TackItemData.patterns(data) == null) continue;
+                int listSize = TackItemData.patterns(data) == null ? -1 : TackItemData.patterns(data).size();
                 if(((listSize > 0 && decorated)||(listSize <= 0 && !decorated) )&& prev != i  ){
                     found = stack;
                     index = i;
@@ -41,16 +37,20 @@ public class TackMergeRecipe extends CustomRecipe {
         }
         return new Tuple<>(found,index);
     }
-    int itemCount(Container container){
+    int itemCount(CraftingInput container){
         int count = 0;
-        for(int i = 0; i < container.getContainerSize(); i++){
+        for(int i = 0; i < container.size(); i++){
             ItemStack stack = container.getItem(i);
             if(!stack.isEmpty()) count++;
         }
         return count;
     }
     @Override
-    public boolean matches(CraftingContainer container, Level level) {
+    public boolean matches(CraftingInput container, Level level) {
+        return matchesInput(container);
+    }
+
+    private boolean matchesInput(CraftingInput container) {
         var tackA = findDecorated(container, -100,true);
         var tackB = findDecorated(container, tackA.getB(),true);
         var tackC = findDecorated(container, -100,false);
@@ -58,31 +58,34 @@ public class TackMergeRecipe extends CustomRecipe {
     }
 
     @Override
-    public ItemStack assemble(CraftingContainer container, RegistryAccess access) {
+    public ItemStack assemble(CraftingInput container) {
+        if (!matchesInput(container)) return ItemStack.EMPTY;
         var tackA = findDecorated(container, -100,true);
         var tackB = findDecorated(container, tackA.getB(),true);
         ItemStack tackWithPatterns = tackA.getA();
         ItemStack tackWithoutPatterns = tackB.getA();
 
-        return TackTagUtility.mergeTack(tackWithPatterns.copy(),tackWithoutPatterns.copy());
+        ItemStack result = tackWithPatterns.copy();
+        var data = TackItemData.read(result);
+        var patterns = TackItemData.patterns(data);
+        patterns.addAll(TackItemData.patterns(TackItemData.read(tackWithoutPatterns)).copy());
+        TackItemData.write(result, data);
+        return result;
     }
 
     @Override
-    public NonNullList<ItemStack> getRemainingItems(CraftingContainer container){
-        NonNullList<ItemStack> nonnulllist = NonNullList.withSize(container.getContainerSize(), ItemStack.EMPTY);
+    public NonNullList<ItemStack> getRemainingItems(CraftingInput container){
+        NonNullList<ItemStack> nonnulllist = NonNullList.withSize(container.size(), ItemStack.EMPTY);
+        if (!matchesInput(container)) return nonnulllist;
         var tackA = findDecorated(container, -100,true);
         var tackB = findDecorated(container, tackA.getB(),true);
         nonnulllist.set(tackA.getB(), tackA.getA().copy());
         nonnulllist.set(tackB.getB(), tackB.getA().copy());
         return nonnulllist;
     }
-    @Override
-    public boolean canCraftInDimensions(int x, int y) {
-        return x * y >= 2;
-    }
 
     @Override
-    public RecipeSerializer<?> getSerializer() {
-        return ModRecipes.MERGE_TACK.get();
+    public RecipeSerializer<TackMergeRecipe> getSerializer() {
+        return SERIALIZER;
     }
 }

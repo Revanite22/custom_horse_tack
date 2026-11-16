@@ -12,6 +12,7 @@ public class HorseStick extends Item {
     public HorseStick(Properties prop) {
         super(prop);
     }
+    @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         return PrintHorseStats.printHorseStatsToChat(player,target);
     }

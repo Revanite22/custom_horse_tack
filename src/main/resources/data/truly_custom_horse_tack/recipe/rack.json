@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "S S",
+    "L L"
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "S": "minecraft:stick",
+    "L": "#minecraft:wooden_slabs"
+  },
+  "result": {
+    "count": 1,
+    "id": "truly_custom_horse_tack:saddle_rack"
+  }
+}

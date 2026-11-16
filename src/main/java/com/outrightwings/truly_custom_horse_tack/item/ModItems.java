@@ -1,65 +1,44 @@
 package com.outrightwings.truly_custom_horse_tack.item;
 
 import com.outrightwings.truly_custom_horse_tack.Main;
-import com.outrightwings.truly_custom_horse_tack.block.JumpBlock;
 import com.outrightwings.truly_custom_horse_tack.block.ModBlocks;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.DeferredItem;
 import net.minecraft.world.item.*;
-import net.minecraft.world.level.ItemLike;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.WallBlock;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.RegisterColorHandlersEvent;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
-import sekelsta.horse_colors.entity.ModEntities;
 
-import java.util.function.Supplier;
 
-@Mod.EventBusSubscriber(value = Dist.CLIENT, modid = Main.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ModItems {
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, Main.MODID);
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Main.MODID);
 
-    public static final RegistryObject<StatPotion> INCREASE_JUMP_POTION = ITEMS.register("increase_jump_potion",() -> new StatPotion(new Item.Properties(),true,true));
-    public static final RegistryObject<StatPotion> DECREASE_JUMP_POTION = ITEMS.register("decrease_jump_potion",() -> new StatPotion(new Item.Properties(),false,true));
-    public static final RegistryObject<StatPotion> INCREASE_SPEED_POTION = ITEMS.register("increase_speed_potion",() -> new StatPotion(new Item.Properties(),true,false));
-    public static final RegistryObject<StatPotion> DECREASE_SPEED_POTION = ITEMS.register("decrease_speed_potion",() -> new StatPotion(new Item.Properties(),false,false));
-    public static final RegistryObject<HorseStick> HORSE_STICK = ITEMS.register("horse_stick",()->new HorseStick(new Item.Properties()));
+    public static final DeferredItem<StatPotion> INCREASE_JUMP_POTION = ITEMS.registerItem("increase_jump_potion", properties -> new StatPotion(properties,true,true));
+    public static final DeferredItem<StatPotion> DECREASE_JUMP_POTION = ITEMS.registerItem("decrease_jump_potion", properties -> new StatPotion(properties,false,true));
+    public static final DeferredItem<StatPotion> INCREASE_SPEED_POTION = ITEMS.registerItem("increase_speed_potion", properties -> new StatPotion(properties,true,false));
+    public static final DeferredItem<StatPotion> DECREASE_SPEED_POTION = ITEMS.registerItem("decrease_speed_potion", properties -> new StatPotion(properties,false,false));
+    public static final DeferredItem<HorseStick> HORSE_STICK = ITEMS.registerItem("horse_stick", HorseStick::new);
 
-    public static final RegistryObject<HorseArmorItem> CUSTOM_TACK_ITEM = registerHorseArmor("custom_tack",0);
-    public static final RegistryObject<Item> WINTER_TACK_PATTERN = ITEMS.register("winter_tack_pattern",() -> new TackPatternItem("winter",(new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> RACE_TACK_PATTERN = ITEMS.register("race_tack_pattern",() -> new TackPatternItem("race",(new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> IMPOSSIBLE_TACK_PATTERN = ITEMS.register("impossible_tack_pattern",() -> new TackPatternItem("impossible",(new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> CUTE_TACK_PATTERN = ITEMS.register("cute_tack_pattern",() -> new TackPatternItem("cute",(new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> HEAD_TACK_PATTERN = ITEMS.register("head_tack_pattern",() -> new TackPatternItem("head",(new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> REINS_TACK_PATTERN = ITEMS.register("reins_tack_pattern",() -> new TackPatternItem("reins",(new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> BODY_TACK_PATTERN = ITEMS.register("body_tack_pattern",() -> new TackPatternItem("body",(new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> FEET_TACK_PATTERN = ITEMS.register("feet_tack_pattern",() -> new TackPatternItem("feet",(new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> WINGS_TACK_PATTERN = ITEMS.register("wings_tack_pattern",() -> new TackPatternItem("wings",(new Item.Properties()).stacksTo(1)));
+    public static final DeferredItem<CustomTackItem> CUSTOM_TACK_ITEM = ITEMS.registerItem("custom_tack", CustomTackItem::new);
+    public static final DeferredItem<Item> WINTER_TACK_PATTERN = ITEMS.registerItem("winter_tack_pattern", properties -> new TackPatternItem("winter", properties.stacksTo(1)));
+    public static final DeferredItem<Item> RACE_TACK_PATTERN = ITEMS.registerItem("race_tack_pattern", properties -> new TackPatternItem("race", properties.stacksTo(1)));
+    public static final DeferredItem<Item> IMPOSSIBLE_TACK_PATTERN = ITEMS.registerItem("impossible_tack_pattern", properties -> new TackPatternItem("impossible", properties.stacksTo(1)));
+    public static final DeferredItem<Item> CUTE_TACK_PATTERN = ITEMS.registerItem("cute_tack_pattern", properties -> new TackPatternItem("cute", properties.stacksTo(1)));
+    public static final DeferredItem<Item> HEAD_TACK_PATTERN = ITEMS.registerItem("head_tack_pattern", properties -> new TackPatternItem("head", properties.stacksTo(1)));
+    public static final DeferredItem<Item> REINS_TACK_PATTERN = ITEMS.registerItem("reins_tack_pattern", properties -> new TackPatternItem("reins", properties.stacksTo(1)));
+    public static final DeferredItem<Item> BODY_TACK_PATTERN = ITEMS.registerItem("body_tack_pattern", properties -> new TackPatternItem("body", properties.stacksTo(1)));
+    public static final DeferredItem<Item> FEET_TACK_PATTERN = ITEMS.registerItem("feet_tack_pattern", properties -> new TackPatternItem("feet", properties.stacksTo(1)));
+    public static final DeferredItem<Item> WINGS_TACK_PATTERN = ITEMS.registerItem("wings_tack_pattern", properties -> new TackPatternItem("wings", properties.stacksTo(1)));
 
-    public static final RegistryObject<Item> SADDLE_RACK = ITEMS.register("saddle_rack",() -> new StandingAndWallBlockItem(ModBlocks.SADDLE_RACK.get(),ModBlocks.SADDLE_RACK_WALL.get(),new Item.Properties(), Direction.DOWN));
-    public static final RegistryObject<Item> HEAD_STAND = ITEMS.register("head_stand",() -> new StandingAndWallBlockItem(ModBlocks.HEAD_STAND.get(),ModBlocks.HEAD_STAND_WALL.get(),new Item.Properties(), Direction.DOWN));
+    public static final DeferredItem<Item> SADDLE_RACK = ITEMS.registerItem("saddle_rack", properties -> new StandingAndWallBlockItem(ModBlocks.SADDLE_RACK.get(), ModBlocks.SADDLE_RACK_WALL.get(), Direction.DOWN, properties.useBlockDescriptionPrefix()));
+    public static final DeferredItem<Item> HEAD_STAND = ITEMS.registerItem("head_stand", properties -> new StandingAndWallBlockItem(ModBlocks.HEAD_STAND.get(), ModBlocks.HEAD_STAND_WALL.get(), Direction.DOWN, properties.useBlockDescriptionPrefix()));
 
-    public static final RegistryObject<Item> MIXABLE_DYE = ITEMS.register("mixable_dye",() -> new MixedDye((new Item.Properties()).stacksTo(1)));
-    public static final RegistryObject<Item> RIBBON = ITEMS.register("ribbon",() -> new Ribbon((new Item.Properties()).stacksTo(1)));
+    public static final DeferredItem<Item> MIXABLE_DYE = ITEMS.registerItem("mixable_dye", properties -> new MixedDye(properties.stacksTo(1)));
+    public static final DeferredItem<Item> RIBBON = ITEMS.registerItem("ribbon", properties -> new Ribbon(properties.stacksTo(1)));
 
-    private static RegistryObject<HorseArmorItem> registerHorseArmor(String name, int protection){
-        return ITEMS.register(name, () -> new CustomTackItem(protection,new ResourceLocation(Main.MODID,"textures/entity/horse/armor/"+name+".png"),(new Item.Properties()).stacksTo(1)));
-    }
-    private static RegistryObject<DyeableHorseArmorItem> registerDyeableHorseArmor(String name, int protection){
-        return ITEMS.register(name, () -> new DyeableHorseArmorItem(protection,new ResourceLocation(Main.MODID,"textures/entity/horse/armor/"+name+".png"),(new Item.Properties()).stacksTo(1)));
-    }
-
-    @SubscribeEvent
     public static void addToCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey().equals(CreativeModeTabs.FUNCTIONAL_BLOCKS)) {
-            event.accept(ForgeRegistries.ITEMS.getValue(ModBlocks.SADDLER.getId()));
+            event.accept(BuiltInRegistries.ITEM.getValue(ModBlocks.SADDLER.getId()));
             event.accept(SADDLE_RACK);
             event.accept(HEAD_STAND);
         } else if (event.getTabKey().equals(CreativeModeTabs.COMBAT)) {
@@ -82,11 +61,9 @@ public class ModItems {
             event.accept(MIXABLE_DYE);
             event.accept(ModBannerPatterns.HORSE_BANNER_PATTERN);
         } else if (event.getTabKey().equals(CreativeModeTabs.COLORED_BLOCKS)) {
-            ForgeRegistries.ITEMS.getEntries().stream().filter(o -> o.getValue().getDescriptionId().contains("jump") && !o.getValue().getDescriptionId().contains("potion")).forEach((object ->
-                    event.accept(object.getValue().asItem())
-            ));
+            BuiltInRegistries.ITEM.stream().filter(item -> item.getDescriptionId().contains("jump") && !item.getDescriptionId().contains("potion")).forEach(event::accept);
         }
 
-        ModEntities.addToCreativeTab(event);
+        // RHG registers its own creative entries; do not add them a second time.
     }
 }

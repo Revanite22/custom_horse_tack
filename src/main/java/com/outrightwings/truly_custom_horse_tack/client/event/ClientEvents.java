@@ -9,16 +9,22 @@ import com.outrightwings.truly_custom_horse_tack.client.renderer.SaddleRackWallB
 import com.outrightwings.truly_custom_horse_tack.item.ModItems;
 import net.minecraft.client.color.item.ItemColors;
 import net.minecraft.world.item.DyeableLeatherItem;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.RegisterColorHandlersEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import com.outrightwings.truly_custom_horse_tack.screen.ModMenus;
+import com.outrightwings.truly_custom_horse_tack.screen.SaddlerBlockScreen;
 
-@Mod.EventBusSubscriber(modid = Main.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Main.MODID, value = Dist.CLIENT)
 public class ClientEvents {
-    @OnlyIn(Dist.CLIENT)
+    @SubscribeEvent
+    public static void registerScreens(RegisterMenuScreensEvent event) {
+        event.register(ModMenus.SADDLER_BLOCK_MENU.get(), SaddlerBlockScreen::new);
+    }
+
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event){
         event.registerBlockEntityRenderer(ModBlocks.HEAD_STAND_BE.get(),HeadStandBlockEntityRenderer::new);
@@ -26,8 +32,8 @@ public class ClientEvents {
         event.registerBlockEntityRenderer(ModBlocks.HEAD_STAND_WALL_BE.get(), HeadStandWallBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlocks.SADDLE_RACK_WALL_BE.get(), SaddleRackWallBlockEntityRenderer::new);
     }
-    @OnlyIn(Dist.CLIENT)
     @SubscribeEvent
+    // Legacy item tint callback is retained for the rendering migration.
     public static void registerItemColors(RegisterColorHandlersEvent.Item event){
         ItemColors itemColors = event.getItemColors();
 

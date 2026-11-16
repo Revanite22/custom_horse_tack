@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " X ",
+    "XDX",
+    " X "
+  ],
+  "key": {
+    "X": "minecraft:leather",
+    "D": "#c:dyes"
+  },
+  "result": {
+    "id": "truly_custom_horse_tack:custom_tack"
+  }
+}

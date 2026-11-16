@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "# #",
+    "#R#",
+    "# #"
+  ],
+  "key": {
+    "#": "minecraft:blue_concrete",
+    "R": "minecraft:red_dye"
+  },
+  "result": {
+    "count": 12,
+    "id": "truly_custom_horse_tack:jump_blue"
+  },
+  "group": "simple_jumps"
+}

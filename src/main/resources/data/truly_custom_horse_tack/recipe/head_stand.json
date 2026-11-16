@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " PS",
+    "PPS",
+    " L "
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "S": "minecraft:stick",
+    "L": "minecraft:smooth_stone_slab"
+  },
+  "result": {
+    "count": 1,
+    "id": "truly_custom_horse_tack:head_stand"
+  }
+}

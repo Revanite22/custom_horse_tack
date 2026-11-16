@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:paper",
+    "minecraft:saddle"
+  ],
+  "result": {
+    "count": 1,
+    "id": "truly_custom_horse_tack:horse_banner_pattern"
+  }
+}

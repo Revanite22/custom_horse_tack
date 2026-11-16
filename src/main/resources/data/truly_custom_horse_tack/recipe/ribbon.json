@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "#",
+    "W",
+    "W"
+  ],
+  "key": {
+    "#": "#minecraft:wool",
+    "W": "#minecraft:wool_carpets"
+  },
+  "result": {
+    "id": "truly_custom_horse_tack:ribbon"
+  }
+}

@@ -4,7 +4,7 @@ import com.outrightwings.truly_custom_horse_tack.Main;
 import com.outrightwings.truly_custom_horse_tack.client.renderer.model.SpecialTack.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.item.DyeColor;
@@ -120,14 +120,14 @@ public enum TackPattern implements StringRepresentable {
     ;
     public final String name;
     private final boolean overlay;
-    private final ResourceLocation armorTextureLocation;
-    private final ResourceLocation patternTextureLocation;
+    private final Identifier armorTextureLocation;
+    private final Identifier patternTextureLocation;
     private final String requiredPattern;
 
     TackPattern(String name,String requiredPattern,boolean overlay){
         this.name = name;
-        this.armorTextureLocation = new ResourceLocation(Main.MODID,"textures/entity/horse/armor/patterns/"+name+".png");
-        this.patternTextureLocation = new ResourceLocation(Main.MODID,"textures/tackpatterns/"+name+".png");
+        this.armorTextureLocation = Identifier.fromNamespaceAndPath(Main.MODID,"textures/entity/horse/armor/patterns/"+name+".png");
+        this.patternTextureLocation = Identifier.fromNamespaceAndPath(Main.MODID,"textures/tackpatterns/"+name+".png");
         this.requiredPattern = requiredPattern;
         this.overlay = overlay;
     }
@@ -145,15 +145,15 @@ public enum TackPattern implements StringRepresentable {
     public String getSerializedName() {
         return name;
     }
-    public ResourceLocation getArmorTextureLocation(){
+    public Identifier getArmorTextureLocation(){
         return armorTextureLocation;
     }
-    public ResourceLocation getPatternIconLocation(){
+    public Identifier getPatternIconLocation(){
         return patternTextureLocation;
     }
-    public ResourceLocation getOverlayTextureLocation(){
+    public Identifier getOverlayTextureLocation(){
         if(overlay)
-            return new ResourceLocation(Main.MODID,"textures/entity/horse/armor/patterns/"+name+"_overlay.png");;
+            return Identifier.fromNamespaceAndPath(Main.MODID,"textures/entity/horse/armor/patterns/"+name+"_overlay.png");;
         return null;
     }
     public String getTranslationKey(){

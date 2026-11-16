@@ -1,0 +1,5 @@
+license="MIT"
+[[mods]]
+modId="tack_item_fixture"
+version="1"
+displayName="Isolated item-data validation"

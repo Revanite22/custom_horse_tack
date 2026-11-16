@@ -1,0 +1,70 @@
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+
+// Never build RHG, substitute a public release, or bundle it in the tack JAR.
+def rhgJar = providers.gradleProperty('rhgJar')
+def rhgUrl = providers.gradleProperty('rhgArtifactUrl')
+def expectedHash = providers.gradleProperty('rhg_sha256').get()
+def sourceFile = rhgJar.isPresent() ? file(rhgJar.get()) : null
+def dependencyFile = layout.buildDirectory.file("dependencies/realistic_horse_genetics-${rhg_version}.jar")
+def sha256 = { File file ->
+    def digest = MessageDigest.getInstance('SHA-256')
+    file.withInputStream { stream ->
+        byte[] buffer = new byte[65536]
+        int count
+        while ((count = stream.read(buffer)) != -1) digest.update(buffer, 0, count)
+    }
+    digest.digest().encodeHex().toString()
+}
+
+def prepareRhg = tasks.register('prepareRhgDependency') {
+    group = 'build setup'
+    description = 'Acquire and verify the exact tested RHG dev.2 dependency.'
+    outputs.file(dependencyFile)
+    // Recheck cached bytes every invocation, including after external corruption.
+    outputs.upToDateWhen { false }
+    doLast {
+        File target = dependencyFile.get().asFile
+        File source = sourceFile
+        if (source == null && target.isFile() && sha256(target) == expectedHash) {
+            logger.lifecycle('Verified cached RHG development artifact.')
+            return
+        }
+        if (source != null && !source.isFile()) {
+            throw new GradleException('The -PrhgJar file does not exist. See BUILDING.md.')
+        }
+        if (source == null && !rhgUrl.isPresent()) {
+            throw new GradleException('Exact RHG dev.2 artifact unavailable. Supply -PrhgArtifactUrl=<stable HTTPS JAR URL> or -PrhgJar=<existing JAR>. See BUILDING.md. No substitute RHG release will be used.')
+        }
+        target.parentFile.mkdirs()
+        File pending = new File(target.parentFile, target.name + '.pending')
+        try {
+            if (source != null) {
+                Files.copy(source.toPath(), pending.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            } else {
+                def uri = new URI(rhgUrl.get())
+                if (uri.scheme != 'https' || uri.userInfo != null) {
+                    throw new GradleException('rhgArtifactUrl must use HTTPS without embedded credentials.')
+                }
+                def connection = uri.toURL().openConnection()
+                connection.connectTimeout = 15000
+                connection.readTimeout = 60000
+                connection.inputStream.withCloseable { input ->
+                    pending.withOutputStream { output -> output << input }
+                }
+            }
+            if (sha256(pending) != expectedHash) {
+                throw new GradleException('RHG SHA-256 mismatch: this is not the pinned tested dev.2 artifact. No dependency was installed.')
+            }
+            Files.move(pending.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            logger.lifecycle('Verified exact RHG development artifact.')
+        } finally {
+            Files.deleteIfExists(pending.toPath())
+        }
+    }
+}
+
+dependencies {
+    implementation files(dependencyFile).builtBy(prepareRhg)
+}

@@ -20,15 +20,28 @@ public abstract class SingleInventoryBlock extends Block implements EntityBlock 
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!level.isClientSide) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                          Player player, InteractionHand hand, BlockHitResult hit) {
+        return transferItem(stack, level, pos, player);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+                                               Player player, BlockHitResult hit) {
+        return transferItem(ItemStack.EMPTY, level, pos, player);
+    }
+
+    private InteractionResult transferItem(ItemStack stack, Level level, BlockPos pos, Player player) {
+        if (!level.isClientSide()) {
             BlockEntity entity = level.getBlockEntity(pos);
-            if(entity instanceof SingleInventoryBlockEntity stand){
-                ItemStack stack = player.getItemInHand(hand);
-                if(stack.isEmpty()){
-                    player.addItem(stand.removeItem(0,1));
-                } else if(stand.validItem(stack) && stand.isEmpty()){
-                    stand.setItem(0,stack);
+            if (entity instanceof SingleInventoryBlockEntity stand) {
+                if (stack.isEmpty()) {
+                    ItemStack removed = stand.removeItem(0, 1);
+                    player.addItem(removed);
+                    // A full player inventory must not destroy the display's item.
+                    if (!removed.isEmpty()) stand.setItem(0, removed);
+                } else if (stand.validItem(stack) && stand.isEmpty()) {
+                    stand.setItem(0, stack.copyWithCount(1));
                     stack.shrink(1);
                 }
                 return InteractionResult.CONSUME;
@@ -37,15 +50,7 @@ public abstract class SingleInventoryBlock extends Block implements EntityBlock 
         }
         return InteractionResult.SUCCESS;
     }
-    @Override
-    public void onRemove(BlockState pState, Level pLevel, BlockPos pPos, BlockState pNewState, boolean pIsMoving) {
-        if (pState.getBlock() != pNewState.getBlock()) {
-            BlockEntity blockEntity = pLevel.getBlockEntity(pPos);
-            if (blockEntity instanceof SingleInventoryBlockEntity be) {
-                be.drops();
-            }
-        }
-        super.onRemove(pState, pLevel, pPos, pNewState, pIsMoving);
-    }
+    // Modern BlockEntity.preRemoveSideEffects drops Container contents automatically.
+    // Retaining the legacy onRemove drop path would drop the inventory twice.
     public abstract float getRotation(BlockState state);
 }

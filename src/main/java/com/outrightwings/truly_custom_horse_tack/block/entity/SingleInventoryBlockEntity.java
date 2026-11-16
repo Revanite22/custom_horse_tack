@@ -1,6 +1,13 @@
 package com.outrightwings.truly_custom_horse_tack.block.entity;
 
-import com.outrightwings.truly_custom_horse_tack.item.CustomTackItem;
+import com.outrightwings.truly_custom_horse_tack.item.tack.TackItemData;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponentGetter;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -12,6 +19,7 @@ import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -20,6 +28,8 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class SingleInventoryBlockEntity extends BlockEntity implements WorldlyContainer{
     private NonNullList<ItemStack> stacks;
+    private ListTag preservedItems = new ListTag();
+    private CompoundTag carriedCustomData = new CompoundTag();
     public SingleInventoryBlockEntity(BlockEntityType<?> be, BlockPos pos, BlockState state) {
         super(be, pos, state);
         this.stacks = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
@@ -60,17 +70,14 @@ public abstract class SingleInventoryBlockEntity extends BlockEntity implements 
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        ItemStack copy = this.stacks.get(0).copy();
-        this.stacks.get(0).shrink(1);
-        setChanged();
-        return copy;
+        ItemStack removed = ContainerHelper.removeItem(this.stacks, slot, amount);
+        if (!removed.isEmpty()) setChanged();
+        return removed;
     }
 
     @Override
     public ItemStack removeItemNoUpdate(int p_18951_) {
-        ItemStack copy = this.stacks.get(0).copy();
-        this.stacks.get(0).shrink(1);
-        return copy;
+        return ContainerHelper.takeItem(this.stacks, p_18951_);
     }
 
     @Override
@@ -84,32 +91,57 @@ public abstract class SingleInventoryBlockEntity extends BlockEntity implements 
         return false;
     }
     public boolean validItem(ItemStack item) {
-        return item.getItem() instanceof CustomTackItem || item.is(Items.SADDLE);
+        return TackItemData.isTack(item) || item.is(Items.SADDLE);
     }
     @Override
     public void clearContent() {
         this.stacks = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
+        setChanged();
     }
 
     @Override
     public void setChanged() {
-        if (this.level == null) return;
-        this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_CLIENTS);
         super.setChanged();
+        if (this.level != null && !this.level.isClientSide()) {
+            this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_CLIENTS);
+        }
     }
     @Override
-    public void load(CompoundTag compound) {
-        super.load(compound);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        var loaded = DisplayInventoryData.load(input.read(DisplayInventoryData.ROOT).orElseGet(CompoundTag::new), input.lookup());
         this.stacks = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(compound, this.stacks);
-        if (this.level != null)
-            if (this.level.isClientSide) this.requestModelDataUpdate();
+        this.stacks.set(0, loaded.stack());
+        this.preservedItems = loaded.preserved();
+        this.carriedCustomData = input.read("tcht_carried_custom_data", CompoundTag.CODEC).orElseGet(CompoundTag::new);
+        if (this.level != null && this.level.isClientSide()) this.requestModelDataUpdate();
     }
 
     @Override
-    public void saveAdditional(CompoundTag compound) {
-        super.saveAdditional(compound);
-        ContainerHelper.saveAllItems(compound, this.stacks);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        DisplayInventoryData.save(output, this.stacks, preservedItems);
+        if (!carriedCustomData.isEmpty()) output.store("tcht_carried_custom_data", CompoundTag.CODEC, carriedCustomData);
+    }
+
+    @Override
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        CompoundTag carried = carriedCustomData.copy();
+        if (!preservedItems.isEmpty()) carried.put(DisplayInventoryData.PRESERVED_ITEMS, preservedItems.copy());
+        if (!carried.isEmpty()) components.set(DataComponents.CUSTOM_DATA, CustomData.of(carried));
+        // Active Items are deliberately excluded: vanilla drops Container contents.
+    }
+
+    @Override
+    protected void applyImplicitComponents(DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        CompoundTag carried = components.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        if (carried.get(DisplayInventoryData.PRESERVED_ITEMS) instanceof ListTag list) {
+            preservedItems = list.copy();
+            carried.remove(DisplayInventoryData.PRESERVED_ITEMS);
+        }
+        carriedCustomData = carried;
     }
 
     @Override
@@ -118,8 +150,8 @@ public abstract class SingleInventoryBlockEntity extends BlockEntity implements 
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        return this.saveWithoutMetadata();
+    public CompoundTag getUpdateTag(HolderLookup.Provider lookup) {
+        return this.saveWithoutMetadata(lookup);
     }
 
 }
