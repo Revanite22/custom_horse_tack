@@ -86,6 +86,14 @@ public class ItemFixtureMod {
 
     /** Bind fixture defaults once; preserve actual mixed-dye durability and pattern stack limits. */
     public static void bindFixtureComponents() {
+        // The fixture does not load vanilla item component resources. Match the real
+        // elytra prototype so legacy DAMAGE is retained by ItemStack's codec.
+        var elytra = net.minecraft.world.item.Items.ELYTRA.builtInRegistryHolder();
+        if (!elytra.areComponentsBound()) elytra.bindComponents(DataComponentMap.builder()
+                .set(DataComponents.MAX_STACK_SIZE, 1).set(DataComponents.MAX_DAMAGE, 432)
+                .set(DataComponents.DAMAGE, 0).set(DataComponents.GLIDER, net.minecraft.util.Unit.INSTANCE)
+                .set(DataComponents.EQUIPPABLE, net.minecraft.world.item.equipment.Equippable.builder(net.minecraft.world.entity.EquipmentSlot.CHEST).build())
+                .build());
         for (var holder : ITEMS.getEntries()) {
             var ref = holder.get().builtInRegistryHolder();
             if (ref.areComponentsBound()) continue;

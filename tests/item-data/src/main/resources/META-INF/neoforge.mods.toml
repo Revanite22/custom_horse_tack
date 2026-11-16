@@ -3,3 +3,6 @@ license="MIT"
 modId="tack_item_fixture"
 version="1"
 displayName="Isolated item-data validation"
+
+[[mixins]]
+config="truly_custom_horse_tack.mixins.json"

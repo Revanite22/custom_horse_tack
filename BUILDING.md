@@ -454,17 +454,58 @@ foal and Saddler preview visuals await a runnable client after remaining mixin
 work. All Task 8 edits remain pending alongside this task; no commit or push is
 performed.
 
+## Task 10: mixins, accessories and flight
+
+The remaining entity/equipment mixins now compile against the actual target
+classes. All four original mixins and their purposes, exact hooks, preservation
+decisions and first in-game checks are documented in
+[docs/TASK10_MIXINS_AND_GAMEPLAY.md](docs/TASK10_MIXINS_AND_GAMEPLAY.md).
+
+- Keep RHG's private itemInteract injection for accessories, using server-only
+  native equipment updates and the original slot order, duplication/full-slot
+  rules, leg elytra and axe removal. BODY/SADDLE remain reserved for RHG. Native
+  equipment serialization and tracking are retained, with no new save fields.
+- Restore automatic airborne ridden flight via RHG aiStep, modern canGlide and
+  updateFallFlying overrides. Preserve rider/passenger/ground/levitation checks,
+  usable leg GLIDER or wing tack, ten-tick events, no flight durability wear and
+  original fall protection. Vanilla movement now supplies speed/travel/block
+  effects; the LivingEntity mixin adds only the original 1.02 authority-side
+  velocity multiplier, without fragile local capture.
+- Remove obsolete HorseArmorRendererMixin and SaddleMixin because Task 9's
+  supported render-state/layer APIs already provide equivalent rendering duties.
+  No rendering system was rewritten. Enable required JAVA_25 mixins with
+  defaultRequire=1, and remove obsolete horse/flight access-transformer entries.
+- The fixture now compiles and loads the production mixin configuration, not
+  just the policy helpers. Tests verify transformed RHG/LivingEntity methods,
+  auto-start flags, native private ridden travel, equipment codec/packet round
+  trips and RHG's actual legacy equipment adapter. Fixture elytra defaults match
+  the real vanilla component prototype for meaningful durability tests.
+
+Validation: all 71 tests pass (55 existing plus 16 new), zero failures/errors/
+skips. Full Java compilation has zero errors; processResources and assemble
+pass. The artifact is `build/libs/truly_custom_horse_tack-26.1.2-1.6.0.jar`.
+Package checks verify expanded metadata, RHG dev.2 requirement, JAVA_25 mixin
+configuration/classes, AT, license, all 440 assets and datapack JSON. No RHG JAR,
+test classes or retired mixin classes are bundled. Fixture-tested mixin/helper
+bytes match production bytecode. Logs remain in `.gradle/task10-tests.log`,
+`.gradle/task10-compile.log` and `.gradle/task10-assemble.log`.
+
+This is the first assembled development JAR, not a verified client/server build.
+Full startup, rendering/resource loading, world migration and multiplayer flight
+still require in-game testing. RHG, registry IDs, customization schema and
+existing assets are unchanged. No commit or push is performed.
+
 ## Legacy configuration decisions
 
 - Remove NeoGradle's `minecraft` block, `fg.deobf`, `reobfJar`, MixinGradle and
   the old Mixin annotation processor. Modern NeoForge supplies Mixin and uses
   unobfuscated names; metadata registers the existing mixin configuration.
-- Remove the generated legacy refmap reference. Keep the existing mixin list,
-  `required: true` and Java 17 compatibility level: the mixin source itself has
-  not changed, while the project compiler targets Java 25.
+- Remove the generated legacy refmap reference. Task 10 keeps required mixins,
+  migrates entity hooks, retires replaced rendering hooks and uses JAVA_25,
+  supported by the bundled Mixin version.
 - Register the access-transformer file with ModDevGradle and NeoForge metadata.
   Task 6 updates its WallBlock rule and removes obsolete wall shape members;
-  unrelated legacy horse/flight member names await their Java/API migration.
+  Task 10 removes the remaining obsolete horse/flight access entries.
 - Remove the obsolete pack-format-15 `pack.mcmeta`; rely on NeoForge's mod-pack
   metadata, matching the RHG port. All asset/data identifiers remain unchanged.
 - Preserve mod ID `truly_custom_horse_tack`, mod version `1.6.0`, original authors,

@@ -1,5 +1,11 @@
 # Rendering hooks verified against RHG Build #2
 
+Task 10 status: the two obsolete rendering mixins described below have now been
+retired. The Task 9 event-based rendering path remains unchanged. See
+[TASK10_MIXINS_AND_GAMEPLAY.md](TASK10_MIXINS_AND_GAMEPLAY.md) for the completed
+equipment/flight migration and validation. The inspection notes below record the
+Task 9 handoff and the reason replacement injections are unnecessary.
+
 Reference artifact: `realistic_horse_genetics-26.1.2-13.5-dev.2.jar`, SHA-256
 `22e6eeaea331381c4e6a28013ee938de3028b762b30e9def7ccc2174fc4701e8`.
 All signatures and behavior below were inspected using `javap -p -c -s` on

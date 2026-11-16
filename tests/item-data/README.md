@@ -26,7 +26,12 @@ root properties. Supply `-PrhgJar=...` or the stable HTTPS artifact URL describe
 in BUILDING.md; substitute releases are rejected. Artifact copies stay in the
 ignored fixture build directory. Earlier checks retain their fixture registries.
 
-The suite currently has 55 tests (zero failures/errors/skips in Task 9):
+Task 10 also compiles and loads the production mixins using the fixture metadata.
+Mixin/helper bytecode is verified against the main build. The fixture elytra
+prototype supplies vanilla durability/GLIDER components so legacy damage tests
+exercise the same item semantics as a game with its component resources loaded.
+
+The suite currently has 71 tests (zero failures/errors/skips in Task 10):
 
 - Original item-data checks: pattern order, dye IDs/RGB, unknown fields and
   patterns, copies, washing, codec round trips and vanilla item conversion from
@@ -77,6 +82,16 @@ The suite currently has 55 tests (zero failures/errors/skips in Task 9):
 - Head/ribbon/bell/wing poses and reset behavior, decorative textures and colors,
   banner mask order, and equipment/body/pattern queue ordering. The actual RHG
   armor model accepts its GeneticHorseRenderState.
+- Accessory slot order across all three genetic equines, duplicate/full-slot and
+  client-side no-mutation handling, leg elytra and axe removal without removing
+  BODY/SADDLE or losing colors/counts/durability.
+- Native EntityEquipment and equipment-packet round trips, and RHG's actual
+  HandItems/ArmorItems migration from data version 3465 with accessory data.
+- Rider/ground/passenger/levitation/durability flight restrictions, wing fallback,
+  original fall immunity, ten-tick server glide events and no flight wear.
+- Actual transformed target classes: the auto-start injection, canGlide,
+  updateFallFlying/fall immunity overrides and private vanilla travelRidden with
+  derived input, native ridden speed and the 1.02 authority-side boost.
 
 Unit tests do not run a server data-pack reload. Resource-codec checks supply
 named holders for five tags verified in vanilla/NeoForge resources; they do not
@@ -102,8 +117,11 @@ and direct inspection of the pinned RHG JAR API. Texture composition description
 are also tested against actual RHG TextureLayerGroup/Color classes. Integration
 tests use real RHG class definitions and production tack code, mock entities,
 a fake texture identifier and mock collectors. They do not start a complete RHG
-world/client, upload textures or load the legacy mixins. No RHG model/state copy
-or simplified substitute is used.
+world/client or upload textures. The two current entity mixins are actually
+applied by the fixture; retired rendering mixins are absent. No RHG model/state
+copy or simplified substitute is used. Direct calls through transformed methods
+still use mock entity state; they do not prove real flight physics, player
+movement synchronization or full client/dedicated-server startup.
 
 Reports: `tests/item-data/build/test-results/test/` and
 `tests/item-data/build/reports/tests/test/`.

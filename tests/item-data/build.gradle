@@ -11,7 +11,8 @@ migratedSources.include '**/TackItemData.java',
             '**/DisplayRenderState.java', '**/DisplayRenderers.java',
             '**/client/renderer/model/*.java', '**/TackItemTint.java',
             '**/client/renderer/model/SpecialTack/*.java', '**/HorseModelRotations.java', '**/TackModels.java',
-            '**/HorseTack*.java', '**/TextureCache.java', '**/CustomTackItem.java', '**/TackTagUtility.java', '**/TackTextureCatalog.java'
+            '**/HorseTack*.java', '**/TextureCache.java', '**/CustomTackItem.java', '**/TackTagUtility.java', '**/TackTextureCatalog.java',
+            '**/entity/HorseAccessories.java', '**/entity/HorseFlight.java', '**/mixin/*.java'
 sourceSets.main.java.source(migratedSources)
 neoForge {
     version = '26.1.2.126'
@@ -40,3 +41,6 @@ file('../../gradle.properties').withInputStream { rhgPins.load(it) }
 ext.rhg_version = rhgPins.getProperty('rhg_version')
 ext.rhg_sha256 = rhgPins.getProperty('rhg_sha256')
 apply from: '../../gradle/rhg-dependency.gradle'
+
+// Load the production mixin configuration in the fixture as well as testing its policy helpers.
+tasks.named('processResources') { from('../../src/main/resources/truly_custom_horse_tack.mixins.json') }
