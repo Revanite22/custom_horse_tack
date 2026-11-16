@@ -1,21 +1,21 @@
 package com.outrightwings.truly_custom_horse_tack.screen;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.outrightwings.truly_custom_horse_tack.Main;
 import com.outrightwings.truly_custom_horse_tack.item.ModItems;
 import com.outrightwings.truly_custom_horse_tack.item.tack.TackPattern;
+import com.outrightwings.truly_custom_horse_tack.item.tack.TackItemData;
 import com.outrightwings.truly_custom_horse_tack.item.tack.TackTagUtility;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -25,8 +25,8 @@ import net.minecraft.world.entity.animal.allay.Allay;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.*;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import sekelsta.horse_colors.entity.HorseGeneticEntity;
 import sekelsta.horse_colors.entity.ModEntities;
 
@@ -34,7 +34,7 @@ import java.util.List;
 
 @OnlyIn(Dist.CLIENT)
 public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu> {
-    private static final ResourceLocation BG_LOCATION = new ResourceLocation(Main.MODID, "textures/gui/container/saddler.png");
+    private static final Identifier BG_LOCATION = Identifier.fromNamespaceAndPath(Main.MODID, "textures/gui/container/saddler.png");
     private static final int PATTERN_COLUMNS = 4;
     private static final int PATTERN_ROWS = 4;
     private static final int SCROLLER_WIDTH = 5;
@@ -58,11 +58,11 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
     private ItemStack dyeStack = ItemStack.EMPTY;
     private ItemStack patternStack = ItemStack.EMPTY;
     private boolean displayPatterns;
-    private boolean hasMaxPatterns;
     private float scrollOffs;
     private boolean scrolling;
     private int startRow;
     public HorseGeneticEntity horsePreview;
+    private Allay previewPassenger;
     public SaddlerBlockScreen(SaddlerBlockMenu menu, Inventory inventory, Component name) {
         super(menu, inventory, name);
         menu.registerUpdateListener(this::containerChanged);
@@ -72,49 +72,59 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
 
     protected void init() {
         super.init();
+        discardPreview();
         if (Minecraft.getInstance().level != null){
             horsePreview = new HorseGeneticEntity(ModEntities.HORSE_GENETIC.get(), Minecraft.getInstance().level);
             baseHorseSetup();
+            containerChanged();
         }
-    }
-
-    public void render(GuiGraphics poseStack, int mouseX, int mouseY, float partialTick) {
-        super.render(poseStack, mouseX, mouseY, partialTick);
-        this.renderTooltip(poseStack, mouseX, mouseY);
     }
 
     private int totalRowCount() {
         return Mth.positiveCeilDiv(this.menu.getSelectablePatterns().size(), PATTERN_COLUMNS);
     }
-    public void onClose(){
-        super.onClose();
-        if (this.horsePreview != null) {
-            this.horsePreview.remove(Entity.RemovalReason.DISCARDED);
+    @Override
+    public void removed() {
+        discardPreview();
+        this.menu.registerUpdateListener(() -> {});
+        super.removed();
+    }
+
+    private void discardPreview() {
+        if (previewPassenger != null) {
+            previewPassenger.remove(Entity.RemovalReason.DISCARDED);
+            previewPassenger = null;
+        }
+        if (horsePreview != null) {
+            horsePreview.remove(Entity.RemovalReason.DISCARDED);
+            horsePreview = null;
         }
     }
-    protected void renderBg(GuiGraphics poseStack, float tick, int mouseX, int mouseY) {
-        this.renderBackground(poseStack);
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor poseStack, int mouseX, int mouseY, float tick) {
+        super.extractBackground(poseStack, mouseX, mouseY, tick);
         int i = this.leftPos;
         int j = this.topPos;
-        poseStack.blit(BG_LOCATION, i, j, 0, 0, this.imageWidth, this.imageHeight);
+        blit(poseStack, i, j, 0, 0, this.imageWidth, this.imageHeight);
         Slot slot = this.menu.getSaddleSlot();
         Slot slot1 = this.menu.getDyeSlot();
         Slot slot2 = this.menu.getPatternSlot();
         Slot slot3 = this.menu.getResultSlot();
         if (!slot.hasItem()) {
-            poseStack.blit(BG_LOCATION, i + slot.x, j + slot.y, this.imageWidth, 0, 16, 16);
+            blit(poseStack, i + slot.x, j + slot.y, this.imageWidth, 0, 16, 16);
         }
 
         if (!slot1.hasItem()) {
-            poseStack.blit(BG_LOCATION, i + slot1.x, j + slot1.y, this.imageWidth + 16, 0, 16, 16);
+            blit(poseStack, i + slot1.x, j + slot1.y, this.imageWidth + 16, 0, 16, 16);
         }
 
         if (!slot2.hasItem()) {
-            poseStack.blit(BG_LOCATION, i + slot2.x, j + slot2.y, this.imageWidth + 32, 0, 16, 16);
+            blit(poseStack, i + slot2.x, j + slot2.y, this.imageWidth + 32, 0, 16, 16);
         }
 
         int k = (int)(41.0F * this.scrollOffs);
-        poseStack.blit(BG_LOCATION, i + SCROLL_X, j + SCROLL_Y + k, 232 + (this.displayPatterns ? 0 : SCROLLER_WIDTH ), 0, SCROLLER_WIDTH, SCROLLER_HEIGHT);
+        blit(poseStack, i + SCROLL_X, j + SCROLL_Y + k, 232 + (this.displayPatterns ? 0 : SCROLLER_WIDTH ), 0, SCROLLER_WIDTH, SCROLLER_HEIGHT);
 
         boolean isHoveredPrev = mouseX >= i+ PREVIEW_X && mouseY >= j+PREVIEW_Y && mouseX < i+PREVIEW_X + PREVIEW_WIDTH && mouseY < j+PREVIEW_Y + PREVIEW_HEIGHT;
         int cornerButton;
@@ -123,7 +133,7 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
         }else{
             cornerButton = PREVIEW_BUTTON;
         }
-        poseStack.blit(BG_LOCATION, i + PREVIEW_X, j+ PREVIEW_Y, 0, cornerButton, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+        blit(poseStack, i + PREVIEW_X, j+ PREVIEW_Y, 0, cornerButton, PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
         if (this.displayPatterns) {
             int startingX = i + PATTERNS_X;
@@ -150,26 +160,35 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
                     } else {
                         startingCorner = this.imageHeight;
                     }
-                    poseStack.blit(BG_LOCATION, cornerX, cornerY, 0, startingCorner, PATTERN_IMAGE_SIZE, PATTERN_IMAGE_SIZE);
-                    poseStack.blit(list.get(currentSlot).getPatternIconLocation(), cornerX, cornerY, 0, 0, PATTERN_IMAGE_SIZE, PATTERN_IMAGE_SIZE,PATTERN_IMAGE_SIZE,PATTERN_IMAGE_SIZE);
+                    blit(poseStack, cornerX, cornerY, 0, startingCorner, PATTERN_IMAGE_SIZE, PATTERN_IMAGE_SIZE);
+                    poseStack.blit(RenderPipelines.GUI_TEXTURED, list.get(currentSlot).getPatternIconLocation(), cornerX, cornerY, 0, 0, PATTERN_IMAGE_SIZE, PATTERN_IMAGE_SIZE, PATTERN_IMAGE_SIZE, PATTERN_IMAGE_SIZE);
                     if(isHovered){
-                        poseStack.renderTooltip(this.font,Component.translatable(list.get(currentSlot).getTranslationKey()),cornerX,cornerY);
+                        poseStack.setTooltipForNextFrame(Component.translatable(list.get(currentSlot).getTranslationKey()), mouseX, mouseY);
                     }
                 }
             }
         }
-        InventoryScreen.renderEntityInInventoryFollowsMouse(poseStack,i+HORSE_X,j+HORSE_Y,25,i+HORSE_X-mouseX,j+HORSE_Y-mouseY, horsePreview);
+        if (horsePreview != null) {
+            // Modern GUI extraction delegates to RHG's registered renderer. Custom tack
+            // layers still require the later horse-rendering migration.
+            InventoryScreen.extractEntityInInventoryFollowsMouse(poseStack,
+                    i + HORSE_X - 23, j + HORSE_Y - 55, i + HORSE_X + 23, j + HORSE_Y + 15,
+                    25, 0.0F, mouseX, mouseY, horsePreview);
+        }
     }
+    private static void blit(GuiGraphicsExtractor graphics, int x, int y, int u, int v, int width, int height) {
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BG_LOCATION, x, y, u, v, width, height, 256, 256);
+    }
+
     private void baseHorseSetup(){
         ItemStack horsesTack = createBaseTack();
-        horsePreview.equipSaddle(null);
-        horsePreview.setFlag(4, !horsePreview.inventory.getItem(0).isEmpty());
-        horsePreview.setItemSlot(EquipmentSlot.CHEST,horsesTack);
+        horsePreview.setItemSlot(EquipmentSlot.SADDLE, new ItemStack(Items.SADDLE));
+        horsePreview.setItemSlot(EquipmentSlot.BODY, horsesTack);
         saddleUpPartner();
     }
     private void saddleUpPartner(){
-        var passenger = new Allay(EntityType.ALLAY, this.minecraft.level);
-        passenger.startRiding(horsePreview);
+        previewPassenger = new Allay(EntityType.ALLAY, this.minecraft.level);
+        previewPassenger.startRiding(horsePreview);
     }
     private ItemStack createBaseTack(){
         ItemStack horsesTack = new ItemStack(ModItems.CUSTOM_TACK_ITEM.get());
@@ -183,14 +202,15 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
         listtag.add(patternTag);
         armorTag.put("Patterns", listtag);
 
-        horsesTack.setTag(armorTag);
+        TackItemData.write(horsesTack, armorTag);
         return horsesTack;
     }
 
     private void updateHorsePreview(ItemStack outputSlotItem){
+        if (horsePreview == null) return;
         var woodToTack = TackTagUtility.mergeTack(createBaseTack(),outputSlotItem);
-        horsePreview.setItemSlot(EquipmentSlot.CHEST,woodToTack);
-        horsePreview.setChest(TackTagUtility.has(outputSlotItem.getTag(), "chest"));
+        horsePreview.setItemSlot(EquipmentSlot.BODY,woodToTack);
+        horsePreview.setChest(TackTagUtility.has(TackItemData.read(outputSlotItem), "chest"));
     }
     private void containerChanged() {
         ItemStack saddleItem = this.menu.getSaddleSlot().getItem();
@@ -199,7 +219,7 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
         ItemStack outputItem = this.menu.getResultSlot().getItem();
 
         if (!ItemStack.matches(saddleItem, this.saddleStack) || !ItemStack.matches(dyeItem, this.dyeStack) || !ItemStack.matches(patternItem, this.patternStack)) {
-            this.displayPatterns = !saddleItem.isEmpty() && !dyeItem.isEmpty() && !this.hasMaxPatterns && !this.menu.getSelectablePatterns().isEmpty();
+            this.displayPatterns = !saddleItem.isEmpty() && !dyeItem.isEmpty() && !this.menu.getSelectablePatterns().isEmpty();
         }
 
         if (this.startRow >= this.totalRowCount()) {
@@ -207,9 +227,9 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
             this.scrollOffs = 0.0F;
         }
 
-        if(!ItemStack.matches(outputItem, Items.AIR.getDefaultInstance())){
+        if(!outputItem.isEmpty()){
             updateHorsePreview(outputItem);
-        } else if(!ItemStack.matches(saddleItem, Items.AIR.getDefaultInstance())){
+        } else if(!saddleItem.isEmpty()){
             updateHorsePreview(saddleItem);
         } else{
             updateHorsePreview(createBaseTack());
@@ -220,7 +240,10 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
         this.patternStack = patternItem.copy();
 
     }
-    public boolean mouseClicked(double mouseX, double mouseY, int p_99085_) {
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
         this.scrolling = false;
         if (this.displayPatterns) {
             int i = this.leftPos + PATTERNS_X;
@@ -249,11 +272,14 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
         if(mouseX >= this.leftPos + PREVIEW_X && mouseY >= this.topPos + PREVIEW_Y && mouseX < this.leftPos + PREVIEW_X + PREVIEW_WIDTH && mouseY < this.topPos + PREVIEW_Y + PREVIEW_HEIGHT){
             currentPreview = currentPreview < MAX_HORSE_PREVIEWS-1 ? ++currentPreview : 0;
             containerChanged();
+            return true;
         }
-        return super.mouseClicked(mouseX, mouseY, p_99085_);
+        return super.mouseClicked(event, doubleClick);
     }
 
-    public boolean mouseDragged(double mouseX, double mouseY, int p_99089_, double p_99090_, double p_99091_) {
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+        double mouseY = event.y();
         int i = this.totalRowCount() - 4;
         if (this.scrolling && this.displayPatterns && i > 0) {
             int j = this.topPos + SCROLL_Y;
@@ -263,14 +289,21 @@ public class SaddlerBlockScreen extends AbstractContainerScreen<SaddlerBlockMenu
             this.startRow = Math.max((int)((double)(this.scrollOffs * (float)i) + 0.5D), 0);
             return true;
         } else {
-            return super.mouseDragged(mouseX, mouseY, p_99089_, p_99090_, p_99091_);
+            return super.mouseDragged(event, dx, dy);
         }
     }
 
-    public boolean mouseScrolled(double p_99079_, double p_99080_, double p_99081_) {
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        this.scrolling = false;
+        return super.mouseReleased(event);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int i = this.totalRowCount() - 4;
         if (this.displayPatterns && i > 0) {
-            float f = (float)p_99081_ / (float)i;
+            float f = (float)scrollY / (float)i;
             this.scrollOffs = Mth.clamp(this.scrollOffs - f, 0.0F, 1.0F);
             this.startRow = Math.max((int)(this.scrollOffs * (float)i + 0.5F), 0);
         }

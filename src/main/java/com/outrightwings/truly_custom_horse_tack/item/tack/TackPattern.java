@@ -1,13 +1,8 @@
 package com.outrightwings.truly_custom_horse_tack.item.tack;
 
 import com.outrightwings.truly_custom_horse_tack.Main;
-import com.outrightwings.truly_custom_horse_tack.client.renderer.model.SpecialTack.*;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.util.Tuple;
-import net.minecraft.world.item.DyeColor;
 
 import java.util.Arrays;
 import java.util.List;

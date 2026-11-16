@@ -1,6 +1,12 @@
 package checks;
 
 import com.outrightwings.truly_custom_horse_tack.block.entity.SingleInventoryBlockEntity;
+import com.outrightwings.truly_custom_horse_tack.block.ModBlocks;
+import com.outrightwings.truly_custom_horse_tack.screen.ModMenus;
+import com.outrightwings.truly_custom_horse_tack.item.MixedDye;
+import com.outrightwings.truly_custom_horse_tack.item.TackPatternItem;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
 import com.outrightwings.truly_custom_horse_tack.item.recipe.TackDuplicateRecipe;
 import com.outrightwings.truly_custom_horse_tack.item.recipe.TackMergeRecipe;
 import com.outrightwings.truly_custom_horse_tack.item.recipe.TackDyeRecipe;
@@ -58,16 +64,40 @@ public class ItemFixtureMod {
             "saddler",
             "wings_tack_pattern",
             "winter_tack_pattern"
-        }) ITEMS.registerSimpleItem(name);
+        }) {
+            if (name.equals("mixable_dye")) ITEMS.registerItem(name, MixedDye::new);
+            else if (name.endsWith("_tack_pattern")) ITEMS.registerItem(name,
+                    properties -> new TackPatternItem(name.replace("_tack_pattern", ""), properties.stacksTo(1)));
+            else ITEMS.registerSimpleItem(name);
+        }
         RECIPES.register("duplicate_tack", () -> TackDuplicateRecipe.SERIALIZER);
         RECIPES.register("merge_tack", () -> TackMergeRecipe.SERIALIZER);
         RECIPES.register("dye_item", () -> TackDyeRecipe.SERIALIZER);
     }
 
     public ItemFixtureMod(IEventBus bus) {
+        ModMenus.MENUS.register(bus);
+        ModBlocks.BLOCKS.register(bus);
+        ModBlocks.BLOCK_ENTITIES.register(bus);
         ITEMS.register(bus);
         RECIPES.register(bus);
         BLOCK_ENTITIES.register(bus);
+    }
+
+    /** Bind fixture defaults once; preserve actual mixed-dye durability and pattern stack limits. */
+    public static void bindFixtureComponents() {
+        for (var holder : ITEMS.getEntries()) {
+            var ref = holder.get().builtInRegistryHolder();
+            if (ref.areComponentsBound()) continue;
+            var components = DataComponentMap.builder();
+            if (holder.get() instanceof MixedDye) {
+                components.set(DataComponents.MAX_STACK_SIZE, 1)
+                        .set(DataComponents.MAX_DAMAGE, 16).set(DataComponents.DAMAGE, 0);
+            } else if (holder.get() instanceof TackPatternItem) {
+                components.set(DataComponents.MAX_STACK_SIZE, 1);
+            } else components.set(DataComponents.MAX_STACK_SIZE, 64);
+            ref.bindComponents(components.build());
+        }
     }
 
     public static class Display extends SingleInventoryBlockEntity {

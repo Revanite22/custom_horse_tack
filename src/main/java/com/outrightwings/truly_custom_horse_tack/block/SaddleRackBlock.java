@@ -1,5 +1,6 @@
 package com.outrightwings.truly_custom_horse_tack.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -12,6 +13,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 public class SaddleRackBlock extends Rotate4Block {
+    public static final MapCodec<SaddleRackBlock> CODEC = simpleCodec(SaddleRackBlock::new);
+
+    @Override
+    public MapCodec<SaddleRackBlock> codec() {
+        return CODEC;
+    }
+
     private static final VoxelShape NS = Block.box(0, 0, 3.5, 16.0D, 15.0D, 12.5D);
     private static final VoxelShape EW = Block.box(3.5, 0, 0, 12.5, 15.0D, 16.0D);
     public SaddleRackBlock(Properties properties) {

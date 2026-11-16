@@ -7,10 +7,10 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 
 public abstract class Rotate4Block extends SingleInventoryBlock{
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     public Rotate4Block(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
@@ -33,11 +33,10 @@ public abstract class Rotate4Block extends SingleInventoryBlock{
     }
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        try{
-            return this.defaultBlockState().setValue(FACING, context.getClickedFace().getClockWise());
-        }catch(Exception e){
-            return this.defaultBlockState().setValue(FACING, Direction.NORTH);
-        }
+        Direction face = context.getClickedFace();
+        // Preserve the original wall orientation and NORTH fallback on vertical faces.
+        return this.defaultBlockState().setValue(FACING,
+                face.getAxis().isHorizontal() ? face.getClockWise() : Direction.NORTH);
     }
     @Override
     public BlockState rotate(BlockState state, Rotation rotation) {

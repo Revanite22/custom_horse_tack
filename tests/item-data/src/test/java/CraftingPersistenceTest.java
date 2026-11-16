@@ -29,11 +29,7 @@ public class CraftingPersistenceTest {
         net.minecraft.server.Bootstrap.bootStrap();
         tack = BuiltInRegistries.ITEM.getValue(Identifier.parse("truly_custom_horse_tack:custom_tack"));
         assertNotSame(Items.AIR, tack, "Fixture items must actually be registered");
-        for (var holder : ItemFixtureMod.ITEMS.getEntries()) {
-            var reference = holder.get().builtInRegistryHolder();
-            if (!reference.areComponentsBound()) reference.bindComponents(DataComponentMap.builder()
-                    .set(DataComponents.MAX_STACK_SIZE, 64).build());
-        }
+        ItemFixtureMod.bindFixtureComponents();
         if (!Items.SADDLE.builtInRegistryHolder().areComponentsBound()) {
             Items.SADDLE.builtInRegistryHolder().bindComponents(DataComponentMap.builder()
                     .set(DataComponents.MAX_STACK_SIZE, 64).build());

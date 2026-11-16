@@ -2,12 +2,13 @@ package com.outrightwings.truly_custom_horse_tack.screen;
 
 import com.outrightwings.truly_custom_horse_tack.Config;
 import com.outrightwings.truly_custom_horse_tack.block.ModBlocks;
-import com.outrightwings.truly_custom_horse_tack.item.CustomTackItem;
 import com.outrightwings.truly_custom_horse_tack.item.MixedDye;
 import com.outrightwings.truly_custom_horse_tack.item.TackPatternItem;
 import com.outrightwings.truly_custom_horse_tack.item.tack.TackPattern;
+import com.outrightwings.truly_custom_horse_tack.item.tack.TackItemData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
@@ -56,7 +57,7 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
         super(ModMenus.SADDLER_BLOCK_MENU.get(), id);
         this.access = access;
         this.saddleSlot = this.addSlot(new Slot(this.inputContainer, 0, 9, 15) {
-            public boolean mayPlace(ItemStack item) { return item.getItem() instanceof CustomTackItem; }
+            public boolean mayPlace(ItemStack item) { return TackItemData.isTack(item); }
         });
         this.dyeSlot = this.addSlot(new Slot(this.inputContainer, 1, 9, 33) {
             public boolean mayPlace(ItemStack item) {
@@ -74,6 +75,8 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
             }
 
             public void onTake(Player player, ItemStack item) {
+                // Client selection is a preview; consumption is authoritative on the server.
+                if (player.level().isClientSide()) return;
                 SaddlerBlockMenu.this.saddleSlot.remove(1);
                 var dyeItem = SaddlerBlockMenu.this.dyeSlot.getItem();
                 if(Config.consume_dye){
@@ -82,6 +85,7 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
                     else{
                         dyeItem.setDamageValue(dyeItem.getDamageValue() + 1);
                         if (dyeItem.getDamageValue() >= dyeItem.getMaxDamage()) dyeItem.setCount(0);
+                        dyeSlot.setChanged();
                     }
                 }
                 if (!SaddlerBlockMenu.this.saddleSlot.hasItem() || !SaddlerBlockMenu.this.dyeSlot.hasItem()) {
@@ -117,7 +121,8 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
         return stillValid(this.access, player, ModBlocks.SADDLER.get());
     }
     public boolean clickMenuButton(Player player, int slot) {
-        if (slot >= 0 && slot < this.selectablePatterns.size()) {
+        // The button packet carries an index, never a client-authored output stack.
+        if (hasValidInputs() && slot >= 0 && slot < this.selectablePatterns.size()) {
             this.selectedSlotIndex.set(slot);
             this.setupResultSlot(this.selectablePatterns.get(slot));
             return true;
@@ -143,12 +148,18 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
         return selected >= 0 && selected < this.selectablePatterns.size();
     }
 
+    private boolean hasValidInputs() {
+        return this.saddleSlot.hasItem() && this.saddleSlot.mayPlace(this.saddleSlot.getItem())
+                && this.dyeSlot.hasItem() && this.dyeSlot.mayPlace(this.dyeSlot.getItem())
+                && (!this.patternSlot.hasItem() || this.patternSlot.mayPlace(this.patternSlot.getItem()));
+    }
+
     public void slotsChanged(Container container) {
         //Get Items in all slots
         ItemStack saddleSlotItem = this.saddleSlot.getItem();
         ItemStack dyeSlotItem = this.dyeSlot.getItem();
         ItemStack patternSlotItem = this.patternSlot.getItem();
-        if (!saddleSlotItem.isEmpty() && !dyeSlotItem.isEmpty()) {
+        if (hasValidInputs()) {
             //Have a saddle and dye, start showing available patterns
             int i = this.selectedSlotIndex.get();
             boolean flag = this.isValidPatternIndex(i);
@@ -176,14 +187,8 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
             }
             //Have a pattern selected
             if (selectedPattern != null) {
-                CompoundTag compoundtag = BlockItem.getBlockEntityData(saddleSlotItem);
-                boolean nbtTooFull = compoundtag != null && compoundtag.contains("Patterns", 9) && !saddleSlotItem.isEmpty() && compoundtag.getList("Patterns", 10).size() >= 6;
-                if (nbtTooFull) {
-                    this.selectedSlotIndex.set(-1);
-                    this.resultSlot.set(ItemStack.EMPTY);
-                } else {
-                    this.setupResultSlot(selectedPattern);
-                }
+                // Tack stores raw Patterns, not a banner's BlockEntityTag. Retain all layers.
+                this.setupResultSlot(selectedPattern);
             } else {
                 this.resultSlot.set(ItemStack.EMPTY);
             }
@@ -202,6 +207,7 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
 
     //Where should stuff go when you shift click it?
     public ItemStack quickMoveStack(Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) return ItemStack.EMPTY;
         ItemStack itemstack = ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
         if (slot != null && slot.hasItem()) {
@@ -214,7 +220,7 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
 
                 slot.onQuickCraft(itemstack1, itemstack);
             } else if (index != this.dyeSlot.index && index != this.saddleSlot.index && index != this.patternSlot.index) {
-                if (itemstack1.getItem() instanceof HorseArmorItem) {
+                if (TackItemData.isTack(itemstack1)) {
                     if (!this.moveItemStackTo(itemstack1, this.saddleSlot.index, this.saddleSlot.index + 1, false)) {
                         return ItemStack.EMPTY;
                     }
@@ -255,7 +261,7 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
     //Wipe inventory clear when player exits
     public void removed(Player player) {
         super.removed(player);
-        this.clearContainer(player, this.inputContainer);
+        this.access.execute((level, pos) -> this.clearContainer(player, this.inputContainer));
     }
 
     //Create output item
@@ -264,21 +270,23 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
         ItemStack dyeSlotItem = this.dyeSlot.getItem();
         ItemStack outputSlotItem = ItemStack.EMPTY;
         //Stuff in slots proceed
-        if (!saddleSlotItem.isEmpty() && !dyeSlotItem.isEmpty()) {
+        if (hasValidInputs()) {
             //Copy input to output
             outputSlotItem = saddleSlotItem.copy();
             outputSlotItem.setCount(1);
 
 
-            CompoundTag tagData = outputSlotItem.getTag();
+            CompoundTag tagData = TackItemData.read(outputSlotItem);
             ListTag listtag;
-            if (tagData != null && tagData.contains("Patterns", 9)) {
-                listtag = tagData.getList("Patterns", 10);
+            if (tagData.get("Patterns") instanceof ListTag existing) {
+                listtag = existing;
             } else {
-                listtag = new ListTag();
-                if (tagData == null) {
-                    tagData = new CompoundTag();
+                // Do not overwrite malformed/unknown legacy data or consume its item.
+                if (tagData.contains("Patterns")) {
+                    this.resultSlot.set(ItemStack.EMPTY);
+                    return;
                 }
+                listtag = new ListTag();
 
                 tagData.put("Patterns", listtag);
             }
@@ -286,15 +294,19 @@ public class SaddlerBlockMenu extends AbstractContainerMenu {
             CompoundTag newData = new CompoundTag();
             newData.putString("Pattern", tackPattern.getSerializedName());
 
-            if(dyeSlotItem.getItem() instanceof DyeItem dyeItem){
-                DyeColor dyecolor = dyeItem.getDyeColor();
+            if(dyeSlotItem.getItem() instanceof DyeItem){
+                DyeColor dyecolor = dyeSlotItem.get(DataComponents.DYE);
+                if (dyecolor == null) {
+                    this.resultSlot.set(ItemStack.EMPTY);
+                    return;
+                }
                 newData.putInt("Color", dyecolor.getId());
             } else if( dyeSlotItem.getItem() instanceof MixedDye mixedDye){
                 newData.putInt("Color", mixedDye.getColor(dyeSlotItem));
             }
 
             listtag.add(newData);
-            outputSlotItem.setTag(tagData);
+            TackItemData.write(outputSlotItem, tagData);
         }
 
         if (!ItemStack.matches(outputSlotItem, this.resultSlot.getItem())) {

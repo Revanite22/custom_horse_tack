@@ -1,18 +1,22 @@
 plugins { id 'java-library'; id 'net.neoforged.moddev' version '2.0.148' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
-sourceSets.main.java {
-    srcDir '../../src/main/java'
-    include '**/TackItemData.java', '**/ItemFixtureMod.java',
+def migratedSources = objects.sourceDirectorySet('migratedSources', 'Production migration classes under test')
+migratedSources.srcDir '../../src/main/java'
+migratedSources.include '**/TackItemData.java',
             '**/TackDuplicateRecipe.java', '**/TackMergeRecipe.java', '**/TackDyeRecipe.java',
-            '**/SingleInventoryBlockEntity.java', '**/DisplayInventoryData.java'
-}
+            '**/block/*.java', '**/block/entity/*.java',
+            '**/SaddlerBlockMenu.java', '**/ModMenus.java', '**/TackPattern.java',
+            '**/TackPatternItem.java', '**/MixedDye.java', '**/Config.java'
+sourceSets.main.java.source(migratedSources)
 neoForge {
     version = '26.1.2.126'
+    accessTransformers.from('../../src/main/resources/META-INF/accesstransformer.cfg')
     mods { tack_item_fixture { sourceSet(sourceSets.main) } }
     unitTest { enable(); testedMod = mods.tack_item_fixture }
 }
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testImplementation 'org.mockito:mockito-core:5.20.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 tasks.named('test') { useJUnitPlatform(); maxHeapSize = '2G' }
@@ -20,3 +24,5 @@ tasks.named('test') { useJUnitPlatform(); maxHeapSize = '2G' }
 tasks.named('test') { systemProperty 'tack.recipeDirectory', file('../../src/main/resources/data/truly_custom_horse_tack/recipe').absolutePath }
 
 tasks.named('test') { systemProperty 'tack.displayLootDirectory', file('../../src/main/resources/data/truly_custom_horse_tack/loot_table/blocks').absolutePath }
+
+tasks.named('test') { systemProperty 'tack.dataDirectory', file('../../src/main/resources/data').absolutePath }

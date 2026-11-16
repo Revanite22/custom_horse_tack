@@ -1,5 +1,6 @@
 package com.outrightwings.truly_custom_horse_tack.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -18,6 +19,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 public class HeadStandBlock extends SingleInventoryBlock {
+    public static final MapCodec<HeadStandBlock> CODEC = simpleCodec(HeadStandBlock::new);
+
+    @Override
+    public MapCodec<HeadStandBlock> codec() {
+        return CODEC;
+    }
+
     public static final IntegerProperty ROTATION = BlockStateProperties.ROTATION_16;
     private static final VoxelShape BASE = Block.box(0,0,0,16,1,16);
     private static final VoxelShape POLE = Block.box(4.5,0,4.5,11.5,12,11.5);

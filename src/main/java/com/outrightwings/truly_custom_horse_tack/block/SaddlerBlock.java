@@ -2,11 +2,12 @@ package com.outrightwings.truly_custom_horse_tack.block;
 
 import com.outrightwings.truly_custom_horse_tack.Main;
 import com.outrightwings.truly_custom_horse_tack.screen.SaddlerBlockMenu;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -19,9 +20,14 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
 
 public class SaddlerBlock extends HorizontalDirectionalBlock{
+    public static final MapCodec<SaddlerBlock> CODEC = simpleCodec(SaddlerBlock::new);
+
+    @Override
+    public MapCodec<SaddlerBlock> codec() {
+        return CODEC;
+    }
 
     protected static final VoxelShape TOP = Block.box(0.0D, 14.0D, 0.0D, 16.0D, 16.0D, 16.0D);
     protected static final VoxelShape BOTTOM = Block.box(1D, 0D, 1D, 15D, 14.0D, 15D);
@@ -44,16 +50,22 @@ public class SaddlerBlock extends HorizontalDirectionalBlock{
         stateBuilder.add(FACING);
     }
 
-    //You say deprecated, but the other didn't trigger? Perhaps am dumb
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult result) {
-        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-            NetworkHooks.openScreen(serverPlayer, getMenuProvider(level, pos));
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult result) {
+        if (!level.isClientSide()) {
+            player.openMenu(state.getMenuProvider(level, pos));
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.SUCCESS;
     }
+
+    @Override
+    protected MenuProvider getMenuProvider(BlockState state, Level level, BlockPos pos) {
+        return getMenuProvider(level, pos);
+    }
+
     public MenuProvider getMenuProvider(Level level, BlockPos pos) {
         return new SimpleMenuProvider(
-                (containerId, playerInventory, splayer) -> new SaddlerBlockMenu(containerId, playerInventory),
+                (containerId, playerInventory, splayer) -> new SaddlerBlockMenu(containerId, playerInventory, ContainerLevelAccess.create(level, pos)),
                 Component.translatable("menu.title."+ Main.MODID +".saddler_block_menu")
         );
     }

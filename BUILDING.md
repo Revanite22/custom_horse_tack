@@ -198,6 +198,116 @@ Resource processing passes. Full `compileJava` reports 268 errors (down from
 other block implementations, accessories/flight and their legacy API callers
 remain deferred. No live world or multiplayer validation is claimed.
 
+## Task 6: block behavior
+
+All six concrete block classes (jump, Saddler and the four displays) and their
+shared four-direction base now use current block APIs. `SingleInventoryBlock`
+already used the modern interaction and removal model from Task 5; it needs no
+further behavior changes. The four display entity classes retain their original
+factories and persistence; only unused legacy item imports were removed.
+
+- Concrete block codecs preserve each type. The jump codec also retains the
+  connection tag instead of reconstructing a generic vanilla wall.
+- `Rotate4Block.FACING` is now `EnumProperty<Direction>` with the same saved
+  `facing` values. Placement retains the clockwise clicked-face mapping and
+  NORTH fallback for vertical faces; the floor rack and 16-position head stand
+  retain their own placement, transforms, shapes and display angles.
+- Modern `WallBlock` removed the old mutable shape maps. Tack-owned state
+  caches retain the original two-pixel post/arms, 13-pixel low outline,
+  16-pixel tall outline and 16-pixel collision height. Waterlogging, connection
+  updates, post rules and rotations remain inherited from vanilla.
+- Replace the four obsolete wall access-transformer entries with one current
+  `protected connectsTo(BlockState, boolean, Direction)` rule. This is required
+  because vanilla's method is private; virtual dispatch now preserves the
+  existing `simple_jumps` tag-only connection policy. The unit test verifies
+  this through a vanilla neighbor update. Unrelated horse/flight rules remain
+  untouched for their later stage.
+- Saddler opening uses `useWithoutItem`, the standard block-state menu provider
+  hook and `Player.openMenu`. The existing menu constructor, title and provider
+  semantics remain. The production GUI/menu implementation is still unported;
+  this task does not establish a usable workstation screen.
+- Move the remaining 17 block loot definitions from `loot_tables/` to
+  `loot_table/`, and three connection/mining tag definitions from `tags/blocks/`
+  to `tags/block/`. Contents and identifiers are byte-identical. Drops, tool
+  requirements and jump connections would otherwise fail to load in 26.1.2.
+  Registry names, blockstate/model/texture assets and persistence formats remain
+  unchanged. Native Container removal from Task 5 remains the only inventory
+  drop path; no legacy `onRemove` drop hook was reintroduced.
+
+Validation: all 25 isolated tests pass (14 previous tests plus 11 block checks),
+with zero failures/errors/skips. The fixture compiles the actual production
+block registry and all block/entity classes; only entry-point/item/menu boundary
+substitutes are used. See `tests/item-data/README.md` for those limits and mock
+world/tag setup. `processResources` passes with all 21 block loot definitions
+and modern tag paths. Full `compileJava` reports 254 errors, down from 268;
+none originate in block or block-entity classes. Remaining diagnostics are in
+client rendering/events (188), mixins (40) and screens/menus (26). Logs remain
+local in `.gradle/task6-tests.log` and `.gradle/task6-compile.log`. Live world,
+drop/explosion and multiplayer validation remain deferred until the complete
+mod can compile and load.
+
+## Task 7: Saddler menu and GUI
+
+The production menu and screen now use Minecraft 26.1.2 APIs. Registry identity
+`truly_custom_horse_tack:saddler_block_menu`, its existing MenuType factory and
+client `RegisterMenuScreensEvent` binding remain unchanged.
+
+- Keep the four workstation slots and 36 player slots at their original
+  coordinates and indices, with the same input categories and shift-click
+  directions. Tack recognition uses `TackItemData.isTack` rather than the removed
+  HorseArmorItem base class. The server rejects invalid button indices/inputs
+  and constructs the output from its current slots.
+- Read/copy/write `CUSTOM_DATA` via `TackItemData`. Append the selected pattern
+  after every existing layer; retain unknown root/layer fields and unknown
+  patterns, and refuse to replace a malformed `Patterns` field. The original
+  uppercase `Patterns`/`Pattern`/`Color` schema and integer representations remain.
+  Vanilla dye color comes from `DataComponents.DYE` and is stored as the legacy
+  dye ID; mixed dye uses its component/legacy RGB compatibility reader.
+- No six-layer cap is introduced. The legacy menu checked banner BlockEntityTag
+  rather than tack's root Patterns, and its screen's max-pattern flag was never
+  set. Ordinary custom tack was therefore uncapped. Tests append a ninth layer
+  while preserving the first eight exactly.
+- Pattern selection still uses vanilla `handleInventoryButtonClick` /
+  `clickMenuButton` and the selected-index DataSlot. Inventory and item component
+  synchronization stay on the standard container protocol; no custom payload
+  or network registration is required. Client selection predicts a preview;
+  only server output-taking consumes tack/dye or advances mixed-dye durability.
+  The consume_dye setting, last-use dye removal and retained pattern items remain.
+- Bind the server menu provider to `ContainerLevelAccess.create(level, pos)`.
+  The old provider used the client constructor with NULL access, bypassing
+  workstation validity and sounds. The client factory retains NULL access.
+  Closing returns the input inventory through the world-bound server context;
+  the output preview is not returned as an extra item.
+- Screen extraction uses `GuiGraphicsExtractor` and `RenderPipelines.GUI_TEXTURED`;
+  mouse buttons/drag/release use `MouseButtonEvent` and scrolling takes both axes.
+  Keep the original 256x256 texture/UVs, labels, 4x4 pattern grid, hover tooltip,
+  scrollbar, selection sound, preview switch, and two wooden preview choices.
+  The existing dye/mixed-dye color workflow remains; no new color picker is added.
+- The local RHG preview now wears BODY tack and a SADDLE-slot saddle. It uses
+  `InventoryScreen.extractEntityInInventoryFollowsMouse` with RHG's registered
+  renderer, retains chest detection and the legacy local allay passenger, and
+  disposes of preview entities on resize/removal. Null-preview updates are safe.
+  No horse or block-entity renderer is migrated. Custom tack layers, textures
+  and model animations in the preview still depend on that later rendering
+  stage. Its bounds use the new inventory-preview convention and need visual
+  validation in a runnable client.
+- Remove only unused client-model imports from the common TackPattern catalog
+  so the actual catalog/menu can be compiled without loading legacy render code.
+  All 98 definitions and their ordering/resource identifiers remain unchanged.
+
+Validation: all 36 isolated tests pass (25 previous plus 11 actual-menu checks),
+with zero failures/errors/skips. The menu fixture uses production registration,
+the production workstation provider, the production menu and real inventories;
+only the entry point/item register and networkless level/player environment are
+substituted. Screen and preview are not exercised by those tests. Full Java
+compilation reports 228 errors, down from 254: client rendering/events (188)
+and mixins (40), with no menu, screen, block or block-entity diagnostics.
+`processResources` passes. Logs remain local in `.gradle/task7-tests.log` and
+`.gradle/task7-compile.log`. Live UI, RHG preview visuals and multiplayer packet
+handling remain deferred until the complete mod can compile and load. RHG,
+resource assets and registry identifiers are unchanged; no decisions are needed
+to complete this stage.
+
 ## Legacy configuration decisions
 
 - Remove NeoGradle's `minecraft` block, `fg.deobf`, `reobfJar`, MixinGradle and
@@ -206,9 +316,9 @@ remain deferred. No live world or multiplayer validation is claimed.
 - Remove the generated legacy refmap reference. Keep the existing mixin list,
   `required: true` and Java 17 compatibility level: the mixin source itself has
   not changed, while the project compiler targets Java 25.
-- Register the existing access-transformer file with ModDevGradle and NeoForge
-  metadata. Its legacy member names are intentionally unchanged pending the
-  Java/API migration; Minecraft workspace generation may reject them.
+- Register the access-transformer file with ModDevGradle and NeoForge metadata.
+  Task 6 updates its WallBlock rule and removes obsolete wall shape members;
+  unrelated legacy horse/flight member names await their Java/API migration.
 - Remove the obsolete pack-format-15 `pack.mcmeta`; rely on NeoForge's mod-pack
   metadata, matching the RHG port. All asset/data identifiers remain unchanged.
 - Preserve mod ID `truly_custom_horse_tack`, mod version `1.6.0`, original authors,

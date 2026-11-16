@@ -2,6 +2,7 @@ package com.outrightwings.truly_custom_horse_tack.block;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
@@ -16,6 +17,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Map;
 
 public class SaddleRackWallBlock extends Rotate4Block{
+    public static final MapCodec<SaddleRackWallBlock> CODEC = simpleCodec(SaddleRackWallBlock::new);
+
+    @Override
+    public MapCodec<SaddleRackWallBlock> codec() {
+        return CODEC;
+    }
+
     private static final Map<Direction, VoxelShape> SHAPE_MAP = Maps.newEnumMap(ImmutableMap.of(
             Direction.NORTH, Shapes.or(Block.box(14, 0, 2.5, 16, 12, 13.5),Block.box(0,5,3.5,16,9,12.5)),
             Direction.SOUTH, Shapes.or(Block.box(0, 0, 2.5, 2, 12, 13.5),Block.box(0,5,3.5,16,9,12.5)),
